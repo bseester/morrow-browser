@@ -2582,3 +2582,21 @@
 [2026-03-20T13:52:11.605Z] registerIPCHandlers: tmExists=true
 
 [2026-03-20T13:52:25.556Z] registerIPCHandlers: tmExists=true
+
+[2026-03-20T16:10:49.406Z] registerIPCHandlers: tmExists=true
+
+[2026-03-20T16:10:57.604Z] createTab called with url="https://www.google.com" workspaceId="default"
+
+[2026-03-20T16:10:57.608Z] switchToTab called with tabId=1. Previous activeTabId=null
+
+[2026-03-20T16:10:57.930Z] did-navigate: callbackExists=true isIncognito=false
+
+[2026-03-20T16:10:57.930Z] tm.onNavigate: url="https://www.google.com/" title="google.com"
+[2026-03-20T16:10:57.930Z] addVisit: url="https://www.google.com/" title="google.com"
+
+[2026-03-20T16:10:58.019Z] tm.onNavigate: url="https://www.google.com/" title="Google"
+[2026-03-20T16:10:58.020Z] addVisit: url="https://www.google.com/" title="Google"
+
+[2026-03-20T16:10:59.911Z] createTab called with url="about:blank" workspaceId="default"
+
+[2026-03-20T16:10:59.912Z] switchToTab called with tabId=2. Previous activeTabId=1

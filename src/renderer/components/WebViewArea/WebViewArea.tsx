@@ -9,10 +9,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabStore } from '../../store/useTabStore';
+import { useSettingsStore, SEARCH_ENGINES } from '../../store/useSettingsStore';
 
 export default function WebViewArea() {
   const { tabs, activeTabId, activeWorkspaceId } = useTabStore();
   const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  const currentEngine = useSettingsStore((state) => state.searchEngine);
+  const engineConfig = SEARCH_ENGINES.find(e => e.value === currentEngine) || SEARCH_ENGINES[0];
+
+  const [searchValue, setSearchValue] = useState('');
 
   // Kısayollar listesi state'i
   const [shortcuts, setShortcuts] = useState<any[]>([]);
@@ -38,6 +44,26 @@ export default function WebViewArea() {
       localStorage.setItem(storageKey, JSON.stringify(defaults));
     }
   }, [workspaceId]);
+
+  const handleHomeSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = searchValue.trim();
+    if (!text) return;
+
+    const urlPattern = /^(https?:\/\/)?localhost(:\d+)?(\/.*)?$|^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/i;
+    let target = text;
+    
+    if (target !== 'about:blank' && !target.startsWith('chrome://') && !target.startsWith('aura://') && !target.startsWith('file://')) {
+      if (urlPattern.test(target) && !target.includes(' ')) {
+        target = target.startsWith('http') ? target : `https://${target}`;
+      } else {
+        target = `${engineConfig.url}${encodeURIComponent(text)}`;
+      }
+    }
+    
+    window.electronAPI?.nav.go(target);
+    setSearchValue('');
+  };
 
   const addShortcut = () => {
     if (!newSiteName.trim() || !newSiteUrl.trim()) return;
@@ -123,9 +149,35 @@ export default function WebViewArea() {
         <h1 style={{ fontSize: '28px', fontWeight: 600, color: isIncognito ? '#e4e6eb' : 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
           {isIncognito ? 'Gizli Tarama' : 'Aura Browser'}
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '40px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '28px' }}>
           {isIncognito ? 'Bu sekmede yaptığınız aramalar geçmişe kaydedilmez.' : 'Yukarıdaki adres çubuğuna bir URL yazın veya arama yapın'}
         </p>
+
+        {/* Ana Ekran Arama Çubuğu */}
+        {!isIncognito && (
+          <form onSubmit={handleHomeSearch} style={{ maxWidth: '440px', margin: '0 auto 40px', position: 'relative' }}>
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              type="text"
+              placeholder={`${engineConfig.name}'da arayın veya bir URL yazın`}
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 42px',
+                borderRadius: '24px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--border-subtle)',
+                color: 'white',
+                outline: 'none',
+                fontSize: '13px',
+                backdropFilter: 'blur(10px)',
+                transition: 'border 0.2s, background 0.2s',
+              }}
+              className="home-search-input"
+            />
+            <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, fontSize: '14px' }}>🔍</span>
+          </form>
+        )}
 
         {/* Chrome stili Kısayollar */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', maxWidth: '540px', margin: '0 auto' }}>
