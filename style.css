@@ -697,3 +697,52 @@ footer {
         margin: 0 auto;
     }
 }
+
+/* ADBLOCKER SECTION */
+.adblock-section {
+    padding: 120px 20px;
+    background: linear-gradient(180deg, #0b0e14 0%, #0a101f 50%, #0b0e14 100%);
+    text-align: center;
+}
+
+.adblock-card {
+    background: rgba(92, 98, 236, 0.03);
+    padding: 80px 40px;
+    border-radius: 40px;
+    border: 1px solid rgba(92, 98, 236, 0.1);
+    max-width: 1000px;
+    margin: 0 auto;
+    transition: all 0.4s ease;
+}
+
+.adblock-card:hover {
+    background: rgba(92, 98, 236, 0.06);
+    border-color: var(--primary);
+    box-shadow: 0 30px 60px rgba(92, 98, 236, 0.1);
+}
+
+.adblock-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 40px;
+    margin-top: 60px;
+}
+
+.adblock-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stat-num {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--secondary);
+    text-shadow: 0 0 20px rgba(33, 230, 193, 0.3);
+}
+
+.stat-desc {
+    color: var(--text-dim);
+    font-size: 16px;
+    font-weight: 600;
+}
