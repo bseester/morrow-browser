@@ -113,6 +113,13 @@ class ExtensionManager {
       const crxUrl = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=120.0.0.0&acceptformat=crx2,crx3&x=id%3D${extensionId}%26updatable%3Dfalse%26uc`;
       const targetDir = path.join(this.extensionsDir, extensionId);
       
+      const existing = this.loadedExtensions.find(e => e.id === extensionId);
+      if (existing) {
+        console.log('[ExtensionManager] Zaten yüklü (Hafızada):', extensionId);
+        resolve(existing);
+        return;
+      }
+
       if (fs.existsSync(targetDir)) {
         console.log('[ExtensionManager] Zaten kurulu:', extensionId);
         this.loadExtensionFromPath(targetDir).then(resolve);

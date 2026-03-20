@@ -576,7 +576,13 @@ export function registerIPCHandlers(windowManager: WindowManager, adBlocker: AdB
   const extensionManager = getExtensionManager();
 
   // Uygulama başlangıcında eklentileri geri yükle
-  extensionManager.restoreExtensions().catch((err) => {
+  extensionManager.restoreExtensions().then(() => {
+    // uBlock Origin Entegrasyonu (Başlangıçta otomatik yükle)
+    const ublockId = 'cjpalhdlnbpafiamejdnhcphjbkeiagm';
+    extensionManager.installCrx(ublockId).catch((err) => {
+      console.error('[AdBlock] uBlock Origin yükleme hatası:', err);
+    });
+  }).catch((err) => {
     console.error('[IPC] Eklenti geri yükleme hatası:', err);
   });
 
