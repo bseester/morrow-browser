@@ -249,6 +249,12 @@ main {
     background: linear-gradient(180deg, var(--bg-color) 0%, #10141b 100%);
 }
 
+#performance .workspace-image img {
+    max-height: 650px;
+    width: auto;
+    object-fit: contain;
+}
+
 .workspace-image {
     flex: 1;
 }
@@ -435,6 +441,15 @@ footer {
     .workspace-content {
         padding-left: 0;
         margin-top: 60px;
+    }
+    .workspace-content .feature-list {
+        display: inline-block;
+        text-align: left;
+        margin-top: 20px;
+    }
+    #performance .workspace-image img {
+        max-width: 85%;
+        margin: 0 auto;
     }
     .section-title.left {
         text-align: center;
