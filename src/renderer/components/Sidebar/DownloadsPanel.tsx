@@ -68,6 +68,12 @@ export default function DownloadsPanel() {
               key={item.id}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
+              onClick={() => {
+                if (item.state === 'completed' && item.savePath) {
+                  window.electronAPI?.downloads?.open(item.savePath);
+                }
+              }}
+              whileHover={item.state === 'completed' ? { background: 'rgba(255,255,255,0.07)', scale: 1.01 } : {}}
               style={{
                 padding: '10px',
                 background: 'rgba(255,255,255,0.03)',
@@ -75,6 +81,8 @@ export default function DownloadsPanel() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '6px',
+                cursor: item.state === 'completed' ? 'pointer' : 'default',
+                transition: 'background 0.2s, transform 0.2s',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

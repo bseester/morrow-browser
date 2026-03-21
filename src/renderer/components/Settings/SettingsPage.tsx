@@ -665,8 +665,32 @@ function AboutSection() {
               Morrow Browser
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Sürüm 1.0.0
+              Sürüm 1.3.1
             </p>
+            <button
+              onClick={() => window.electronAPI?.system?.checkUpdate()}
+              style={{
+                marginTop: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--bg-hover)';
+                e.currentTarget.style.borderColor = 'var(--accent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--bg-secondary)';
+                e.currentTarget.style.borderColor = 'var(--border)';
+              }}
+            >
+              🔄 Güncellemeleri Denetle
+            </button>
           </div>
           <p
             style={{

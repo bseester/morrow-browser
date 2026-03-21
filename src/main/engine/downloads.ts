@@ -92,6 +92,7 @@ export class DownloadManager {
         dbDownloads[index].state = finalState;
         dbDownloads[index].receivedBytes = item.getReceivedBytes();
         dbDownloads[index].completedAt = new Date().toISOString();
+        dbDownloads[index].savePath = item.getSavePath() || dbDownloads[index].savePath;
         db.setDownloads(dbDownloads);
 
         this.sendToRenderer(IPC_CHANNELS.DOWNLOAD_COMPLETE, dbDownloads[index]);
@@ -106,6 +107,22 @@ export class DownloadManager {
       totalBytes: item.getTotalBytes(),
       mimeType: item.getMimeType(),
     });
+  }
+
+  action(id: number, action: 'pause' | 'resume' | 'cancel'): boolean {
+    for (const [key, item] of this.activeDownloads.entries()) {
+      if (key.startsWith(id.toString())) {
+         try {
+           if (action === 'pause') item.pause();
+           else if (action === 'resume') item.resume();
+           else if (action === 'cancel') item.cancel();
+           return true;
+         } catch {
+           return false;
+         }
+      }
+    }
+    return false;
   }
 
   getDownloads(limit: number = 50): DownloadInfo[] {

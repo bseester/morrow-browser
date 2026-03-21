@@ -8,7 +8,7 @@
 import { autoUpdater } from 'electron-updater';
 import { dialog, app } from 'electron';
 
-function checkCustomVersion(): void {
+export function checkCustomVersion(manual: boolean = false, parentWin?: any): void {
   const https = require('https');
   const path = require('path');
   const fs = require('fs');
@@ -22,29 +22,68 @@ function checkCustomVersion(): void {
     console.error('Local package.json read failed for version_id:', e);
   }
 
-  const remoteUrl = 'https://raw.githubusercontent.com/bseester/morrow-browser/main/version.json';
+  // Önbelleği bypass etmek için timestamp ekliyoruz
+  const remoteUrl = `https://raw.githubusercontent.com/bseester/morrow-browser/main/version.json?t=${Date.now()}`;
 
   https.get(remoteUrl, (res: any) => {
+    if (res.statusCode !== 200) {
+      if (manual) {
+        const opts = { type: 'error' as const, buttons: ['Tamam'], title: 'Hata', message: 'Sürüm bilgisi alınamadı.', detail: `HTTP Durumu: ${res.statusCode}` };
+        if (parentWin) dialog.showMessageBox(parentWin, opts);
+        else dialog.showMessageBox(opts);
+      }
+      return;
+    }
+
     let data = '';
     res.on('data', (chunk: any) => { data += chunk; });
     res.on('end', () => {
       try {
         const remote = JSON.parse(data);
         if (remote.latest_id && localId < remote.latest_id) {
-          dialog.showMessageBox({
-            type: 'warning',
-            buttons: ['Tamam'],
-            title: 'Sürüm Güncel Değil',
-            message: 'Morrow Browser güncel değil.',
-            detail: `En son Sürüm ID: ${remote.latest_id}\nMevcut Sürüm ID: ${localId}\n\nLütfen güncel sürümü edinmek için kontrol edin.`
+          const opts = {
+            type: 'warning' as const,
+            buttons: ['İndir', 'Kapat'],
+            defaultId: 0,
+            cancelId: 1,
+            title: 'Yeni Sürüm Mevcut',
+            message: `Morrow Browser için yeni bir sürüm (${remote.version}) mevcut.`,
+            detail: remote.notes ? remote.notes + '\n\nGüncellemek için lütfen güncel sürümü edinin.' : 'Güncellemek için lütfen GitHub sayfasını ziyaret edin.'
+          };
+
+          const showPromise = parentWin ? dialog.showMessageBox(parentWin, opts) : dialog.showMessageBox(opts);
+          
+          showPromise.then((result) => {
+            if (result.response === 0) {
+              const { shell } = require('electron');
+              shell.openExternal('https://github.com/bseester/morrow-browser/releases');
+            }
           });
+        } else if (manual) {
+          const opts = {
+            type: 'info' as const,
+            buttons: ['Tamam'],
+            title: 'Sürüm Kontrolü',
+            message: 'Morrow Browser güncel.',
+            detail: `Mevcut Sürüm ID: ${localId}\n\nHerhangi bir yeni güncelleme bulunamadı.`
+          };
+          if (parentWin) dialog.showMessageBox(parentWin, opts);
+          else dialog.showMessageBox(opts);
         }
       } catch (e) {
-        // ignore or log
+        if (manual) {
+          const opts = { type: 'error' as const, buttons: ['Tamam'], title: 'Hata', message: 'Sürüm verisi işlenemedi.', detail: 'JSON ayrıştırma hatası.' };
+          if (parentWin) dialog.showMessageBox(parentWin, opts);
+          else dialog.showMessageBox(opts);
+        }
       }
     });
   }).on('error', (err: any) => {
-    // ignore or log
+    if (manual) {
+      const opts = { type: 'error' as const, buttons: ['Tamam'], title: 'Hata', message: 'Sunucuya bağlanılamadı.', detail: err.message || '' };
+      if (parentWin) dialog.showMessageBox(parentWin, opts);
+      else dialog.showMessageBox(opts);
+    }
   });
 }
 

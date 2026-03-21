@@ -123,11 +123,13 @@ const electronAPI = {
       ipcRenderer.on('system:on-navigate-router', listener);
       return () => { ipcRenderer.removeListener('system:on-navigate-router', listener); };
     },
+    checkUpdate: () => ipcRenderer.invoke('app:check-update'),
   },
   downloads: {
     get: () => ipcRenderer.invoke('downloads:get'),
     test: () => ipcRenderer.invoke('downloads:test'),
     action: (id: string, action: 'pause' | 'resume' | 'cancel') => ipcRenderer.invoke('downloads:action', { id, action }),
+    open: (filePath: string) => ipcRenderer.invoke('downloads:open', filePath),
     onStart: (cb: any) => {
       const listener = (_e: any, data: any) => cb(data);
       ipcRenderer.on('downloads:start', listener);

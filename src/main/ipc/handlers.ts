@@ -385,69 +385,19 @@ export function registerIPCHandlers(windowManager: WindowManager, adBlocker: AdB
   });
 
   // ─── İndirme Yönetimi (Download Manager) ───
-  const activeDownloads = new Map<string, Electron.DownloadItem>();
-  const downloadHistory: any[] = [];
-
-  const { session } = require('electron');
-
-  session.defaultSession.on('will-download', (event: any, item: Electron.DownloadItem, wc: any) => {
-    const id = Date.now().toString();
-    const filename = item.getFilename();
-    const url = item.getURL();
-    const totalBytes = item.getTotalBytes();
-    const startedAt = new Date().toISOString();
-
-    activeDownloads.set(id, item);
-
-    const data = {
-      id,
-      filename,
-      url,
-      totalBytes,
-      receivedBytes: 0,
-      state: 'progressing',
-      startedAt
-    };
-
-    downloadHistory.unshift(data);
-    windowManager.getMainWindow()?.webContents.send('downloads:start', data);
-
-    item.on('updated', (_e: any, state: 'progressing' | 'interrupted') => {
-      if (state === 'interrupted') {
-        data.state = 'interrupted';
-      } else if (state === 'progressing') {
-        data.receivedBytes = item.getReceivedBytes();
-        data.state = 'progressing';
-        // Görev çubuğu ilerlemesi
-        const ratio = totalBytes > 0 ? data.receivedBytes / totalBytes : -1;
-        windowManager.getMainWindow()?.setProgressBar(ratio);
-      }
-      windowManager.getMainWindow()?.webContents.send('downloads:progress', data);
-    });
-
-    item.once('done', (_e: any, state: 'completed' | 'cancelled' | 'interrupted') => {
-      activeDownloads.delete(id);
-      data.state = state;
-      if (state === 'completed') {
-        data.receivedBytes = totalBytes;
-      }
-      windowManager.getMainWindow()?.setProgressBar(-1); // Bar'ı temizle
-      windowManager.getMainWindow()?.webContents.send('downloads:complete', data);
-    });
-  });
+  // Dal 3 Çakışan yerel dinleyici temizlendi. (DownloadManager.ts her şeyi hallediyor!)
 
   // Dal 4 çakışmayı gidermek için yorum satırı yapıldı
   // ipcMain.handle('downloads:get', () => downloadHistory);
 
-  ipcMain.handle('downloads:action', (_event, { id, action }: { id: string, action: 'pause' | 'resume' | 'cancel' }) => {
-    const item = activeDownloads.get(id);
-    if (!item) return false;
+  ipcMain.handle('downloads:open', async (_event, filePath: string) => {
+    const { shell } = require('electron');
+    if (!filePath) return 'Dosya yolu bulunamadı.';
+    return shell.openPath(filePath);
+  });
 
-    if (action === 'pause') item.pause();
-    else if (action === 'resume') item.resume();
-    else if (action === 'cancel') item.cancel();
-    
-    return true;
+  ipcMain.handle('downloads:action', (_event, { id, action }: { id: any, action: 'pause' | 'resume' | 'cancel' }) => {
+    return downloadManager.action(Number(id), action);
   });
 
   // Dal 4 çakışmayı gidermek için yorum satırı yapıldı
