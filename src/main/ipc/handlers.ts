@@ -618,12 +618,14 @@ export function registerIPCHandlers(windowManager: WindowManager, adBlocker: AdB
       const bps = (limitMbps * 1024 * 1024) / 8;
       session.defaultSession.enableNetworkEmulation({
         offline: false,
-        latency: 0,
+        latency: 20, // 0 yerine ufak bir gecikme eklemek throttling'i aktif tutar.
         downloadThroughput: bps,
         uploadThroughput: bps,
       });
       console.log(`[Network] Bandwidth limited to ${limitMbps} Mbps (${bps} Bps)`);
     }
+    // Sockets havuzunu ve cache bağlantılarını yenilemek için sayfayı reload et
+    getTabManager()?.reload();
   });
 
   ipcMain.handle('system:set-ram-snooze', (_event, minutes: number) => {
