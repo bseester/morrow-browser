@@ -1,6 +1,6 @@
-# Aura Browser 🚀
+# Morrow Browser 🚀
 
-**Aura Browser**, Electron, React ve TypeScript ile geliştirilmiş, hız ve kişiselleştirilebilirlik odaklı modern bir masaüstü internet tarayıcısıdır.
+**Morrow Browser**, Electron, React ve TypeScript ile geliştirilmiş, hız ve kişiselleştirilebilirlik odaklı modern bir masaüstü internet tarayıcısıdır.
 
 ## ✨ Özellikler
 

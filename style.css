@@ -1,14 +1,14 @@
 :root {
     --bg-color: #0b0e14;
-    --primary: #5c62ec;
-    --secondary: #21e6c1;
+    --primary: #ff8c42;
+    --secondary: #ff2e63;
     --windows: #0078d4;
     --text: #ffffff;
     --text-dim: #a0a0a0;
     --glass: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.1);
-    --accent-gradient: linear-gradient(135deg, #5c62ec, #21e6c1);
-    --hero-glow: rgba(92, 98, 236, 0.2);
+    --accent-gradient: linear-gradient(135deg, #ff2e63 0%, #ff8c42 100%);
+    --hero-glow: rgba(255, 120, 80, 0.25);
 }
 
 * {
@@ -111,14 +111,14 @@ main {
 }
 
 .badge {
-    background: rgba(33, 230, 193, 0.1);
+    background: rgba(255, 46, 99, 0.1);
     padding: 8px 18px;
     border-radius: 30px;
     font-size: 14px;
     display: inline-block;
     margin-bottom: 24px;
     color: var(--secondary);
-    border: 1px solid rgba(33, 230, 193, 0.3);
+    border: 1px solid rgba(255, 120, 80, 0.25);
     font-weight: 600;
 }
 
@@ -738,7 +738,7 @@ footer {
     font-size: 48px;
     font-weight: 800;
     color: var(--secondary);
-    text-shadow: 0 0 20px rgba(33, 230, 193, 0.3);
+    text-shadow: 0 0 20px rgba(255, 120, 80, 0.25);
 }
 
 .stat-desc {
