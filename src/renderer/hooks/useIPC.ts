@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { useTabStore } from '../store/useTabStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export function useIPC() {
   const { setTabs, updateTabUrl, updateTabTitle, updateTabLoading } = useTabStore();
@@ -39,6 +40,22 @@ export function useIPC() {
     api.tabs.getList().then((data: any) => {
       setTabs(data.tabs, data.activeTabId, data.activeWorkspaceId);
     });
+
+    // ─── Ayarları Main Process ile Senkronize Et ───
+    const settings = useSettingsStore.getState();
+    
+    // Ağ Sınırlayıcı
+    if (settings.networkLimiterEnabled) {
+      api.system.setNetworkLimit(settings.networkSpeedLimit);
+    } else {
+      api.system.setNetworkLimit(0);
+    }
+
+    // RAM Sınırlayıcı
+    api.system.setRamLimiterEnabled(settings.ramLimiterEnabled);
+    api.system.setMaxRamLimit(settings.maxRamLimit);
+    api.system.setRamHardLimit(settings.ramHardLimit);
+    api.system.setRamSnoozeTime(settings.ramSnoozeTime);
 
     return () => {
       unsubTabUpdate();

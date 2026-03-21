@@ -3,8 +3,10 @@
  * Açık sekmeleri listeler + yeni sekme butonu
  */
 
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTabStore } from '../../store/useTabStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import Tab from './Tab';
 import {
   DndContext,
@@ -22,7 +24,8 @@ import {
 } from '@dnd-kit/sortable';
 
 export default function TabStrip() {
-  const { tabs, activeTabId, reorderTabs } = useTabStore();
+  const { tabs, activeTabId, reorderTabs, groupTabs } = useTabStore();
+  const { tabGroupingEnabled } = useSettingsStore();
 
   const handleCreate = () => {
     window.electronAPI?.tabs.create('about:blank');
@@ -46,43 +49,59 @@ export default function TabStrip() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const activeId = active.id as number;
+    const activeId = active.id as number;
+
+    if (over && activeId !== (over.id as number)) {
       const overId = over.id as number;
-      // Zustand state güncellemesi
       reorderTabs(activeId, overId);
-      // Electron main process güncellemesi
       window.electronAPI?.tabs.reorder(activeId, overId);
     }
   };
 
   return (
     <div
+      className="tab-strip-scroll"
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '2px',
-        flex: 1,
-        minWidth: 0,
-        overflow: 'hidden',
-        padding: '0 4px',
-      }}
-    >
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px',
+          flex: 1,
+          minWidth: 0,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          padding: '0 4px',
+        }}
+      >
+      <style>{`
+        .tab-strip-scroll::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCenter} 
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={tabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
-          <AnimatePresence mode="popLayout">
-            {tabs.map((tab) => (
-              <Tab
-                key={tab.id}
-                tab={tab}
-                isActive={tab.id === activeTabId}
-                onSelect={() => handleSelect(tab.id)}
-                onClose={(e) => handleClose(e, tab.id)}
-              />
-            ))}
-          </AnimatePresence>
+            {tabs.map((tab, index) => {
+              const hasSeparator = index < tabs.length - 1 && tab.groupId !== tabs[index + 1]?.groupId;
+              return (
+                <Tab
+                  key={tab.id}
+                  tab={tab}
+                  isActive={tab.id === activeTabId}
+                  hasSeparator={hasSeparator}
+                  onSelect={() => handleSelect(tab.id)}
+                  onClose={(e) => handleClose(e, tab.id)}
+                />
+              );
+            })}
         </SortableContext>
       </DndContext>
 

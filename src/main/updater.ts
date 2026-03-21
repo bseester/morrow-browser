@@ -9,12 +9,39 @@ import { autoUpdater } from 'electron-updater';
 import { dialog } from 'electron';
 
 export function setupAutoUpdater(): void {
-  // Geliştirme aşamasında otomatik güncellemeleri kapat (hata vermemesi için)
   if (process.env.NODE_ENV === 'development') {
+    // DEV: sadece mock diyalog göster, gerçek updater'ı çalıştırma
+    setTimeout(() => {
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'Morrow Browser için yeni bir sürüm (1.3.4) mevcut.',
+        message: 'Morrow Browser v1.3.4 Yayında! 🎉',
+        detail: [
+          'Sizin için harika yenilikler ekledik:',
+          '',
+          '🚀 RAM ve İnternet Sınırlayıcı yan bara (Sidebar) eklendi!',
+          '📡 Canlı Hız Takibi ve Chrome DevTools Protocol tabanlı katı limit kontrolü.',
+          '📅 Geçmiş ve İndirmeler için akıllı Takvim Tarih filtresi.',
+          '💤 Sekme Uyutma (Tab Snoozing) özelliğiyle inaktif sekmeleri uyuya alma seçeneği.',
+          '⚙️ Ayarlar sayfasında arındırılmış ve hızlandırılmış menü geçişleri.',
+          '',
+          'Keyifli sörfler dileriz! 🚀',
+          'Güncellemek için lütfen güncel sürümü edinin.',
+        ].join('\n'),
+        buttons: ['Kapat', 'İndir'],
+        defaultId: 1,
+        cancelId: 0,
+      }).then(({ response }) => {
+        if (response === 1) {
+          const { shell } = require('electron');
+          shell.openExternal('https://github.com/bseester/morrow-browser/releases/latest');
+        }
+      }).catch(console.error);
+    }, 2000); // 2 saniye sonra göster
     return;
   }
 
-  // Güncellemeleri arka planda indir
+  // PROD: gerçek auto-updater
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
@@ -37,14 +64,16 @@ export function setupAutoUpdater(): void {
   autoUpdater.on('update-downloaded', (info: any) => {
     dialog
       .showMessageBox({
-        type: 'info',
-        buttons: ['Yeniden Başlat', 'Daha Sonra'],
-        title: 'Güncelleme Hazır',
-        message: 'Aura Browser için yeni bir güncelleme indirildi.',
-        detail: `Sürüm ${info.version} kuruluma hazır. Uygulamayı yeniden başlatmak ister misiniz?`,
+        type: 'warning',
+        title: `Morrow Browser için yeni bir sürüm (${info.version}) mevcut.`,
+        message: `Morrow Browser v${info.version} Yayında! 🎉`,
+        detail: `Güncelleme indirildi. Uygulamayı yeniden başlatmak ister misiniz?`,
+        buttons: ['Daha Sonra', 'Yeniden Başlat'],
+        defaultId: 1,
+        cancelId: 0,
       })
       .then((returnValue) => {
-        if (returnValue.response === 0) {
+        if (returnValue.response === 1) {
           autoUpdater.quitAndInstall();
         }
       });
@@ -58,4 +87,36 @@ export function setupAutoUpdater(): void {
       console.error('Updater başlatılamadı:', e);
     }
   }, 5000);
+}
+
+export async function handleCheckUpdate(): Promise<{ success: boolean; message: string }> {
+  const { shell } = require('electron');
+
+  // Rich dialog — startup ile aynı görünüm
+  dialog.showMessageBox({
+    type: 'warning',
+    title: 'Morrow Browser için yeni bir sürüm (1.3.4) mevcut.',
+    message: 'Morrow Browser v1.3.4 Yayında! 🎉',
+    detail: [
+      'Sizin için harika yenilikler ekledik:',
+      '',
+      '🚀 RAM ve İnternet Sınırlayıcı yan bara (Sidebar) eklendi!',
+      '📡 Canlı Hız Takibi ve Chrome DevTools Protocol tabanlı katı limit kontrolü.',
+      '📅 Geçmiş ve İndirmeler için akıllı Takvim Tarih filtresi.',
+      '💤 Sekme Uyutma (Tab Snoozing) özelliğiyle inaktif sekmeleri uyuya alma seçeneği.',
+      '⚙️ Ayarlar sayfasında arındırılmış ve hızlandırılmış menü geçişleri.',
+      '',
+      'Keyifli sörfler dileriz! 🚀',
+      'Güncellemek için lütfen güncel sürümü edinin.',
+    ].join('\n'),
+    buttons: ['Kapat', 'İndir'],
+    defaultId: 1,
+    cancelId: 0,
+  }).then(({ response }) => {
+    if (response === 1) {
+      shell.openExternal('https://github.com/bseester/morrow-browser/releases/latest');
+    }
+  }).catch(console.error);
+
+  return { success: true, message: '' }; // Renderer'da alert() gösterme
 }

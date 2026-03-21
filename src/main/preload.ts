@@ -34,6 +34,16 @@ const electronAPI = {
       ipcRenderer.on(IPC_CHANNELS.TAB_UPDATE, listener);
       return () => ipcRenderer.removeListener(IPC_CHANNELS.TAB_UPDATE, listener);
     },
+    group: {
+      create: (tabIds: number[], title?: string, color?: string) =>
+        ipcRenderer.invoke(IPC_CHANNELS.TAB_GROUP_CREATE, tabIds, title, color),
+      addTab: (tabId: number, groupId: string) =>
+        ipcRenderer.invoke(IPC_CHANNELS.TAB_GROUP_ADD, tabId, groupId),
+      removeTab: (tabId: number) =>
+        ipcRenderer.invoke(IPC_CHANNELS.TAB_GROUP_REMOVE, tabId),
+      toggleCollapse: (groupId: string) =>
+        ipcRenderer.invoke(IPC_CHANNELS.TAB_GROUP_COLLAPSE, groupId),
+    }
   },
 
   // ─── Navigasyon ───
@@ -123,11 +133,25 @@ const electronAPI = {
       ipcRenderer.on('system:on-navigate-router', listener);
       return () => { ipcRenderer.removeListener('system:on-navigate-router', listener); };
     },
+    getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP_INFO),
+    getPerformanceMetrics: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_GET_PERFORMANCE_METRICS),
+    killProcess: (pid: number) => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_KILL_PROCESS, pid),
+    setRamLimiterEnabled: (enabled: boolean) => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_SET_RAM_LIMITER_ENABLED, enabled),
+    setRamHardLimit: (hard: boolean) => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_SET_RAM_HARD_LIMIT, hard),
+    setMaxRamLimit: (limitMb: number) => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_SET_MAX_RAM_LIMIT, limitMb),
+    setRamSnoozeTime: (minutes: number) => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_SET_RAM_SNOOZE_TIME, minutes),
+    setNetworkLimit: (limitMbps: number) => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_SET_NETWORK_LIMIT, limitMbps),
+    checkUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.APP_CHECK_UPDATE),
+    getCacheSize: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_GET_CACHE_SIZE),
+    clearCache: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CLEAR_CACHE),
+    getCookiesCount: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_GET_COOKIES_COUNT),
+    clearCookies: () => ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_CLEAR_COOKIES),
   },
   downloads: {
     get: () => ipcRenderer.invoke('downloads:get'),
     test: () => ipcRenderer.invoke('downloads:test'),
     action: (id: string, action: 'pause' | 'resume' | 'cancel') => ipcRenderer.invoke('downloads:action', { id, action }),
+    open: (filePath: string) => ipcRenderer.invoke('downloads:open', filePath),
     onStart: (cb: any) => {
       const listener = (_e: any, data: any) => cb(data);
       ipcRenderer.on('downloads:start', listener);
@@ -143,6 +167,7 @@ const electronAPI = {
       ipcRenderer.on('downloads:complete', listener);
       return () => ipcRenderer.removeListener('downloads:complete', listener);
     },
+    clearHistory: () => ipcRenderer.invoke(IPC_CHANNELS.DOWNLOADS_CLEAR_HISTORY),
   },
   adblock: {
     toggle: () => ipcRenderer.invoke('adblock:toggle'),
@@ -211,7 +236,7 @@ if (typeof window !== 'undefined' && window.location.hostname.includes('chromewe
     });
 
     // Zaten butonumuzu eklediysek çık
-    if (document.getElementById('aura-install-btn')) return;
+    if (document.getElementById('morrow-install-btn')) return;
 
     const match = window.location.pathname.match(/\/([a-z]{32})(\/|$|\?)/);
     if (!match) return;
@@ -220,8 +245,8 @@ if (typeof window !== 'undefined' && window.location.hostname.includes('chromewe
     
     // Web store kendi DOM'unu manipüle edebildiği için Body yerine document.documentElement'e asıyoruz
     const btn = document.createElement('button');
-    btn.id = 'aura-install-btn';
-    btn.innerText = '✨ Aura Tarayıcıya Ekle';
+    btn.id = 'morrow-install-btn';
+    btn.innerText = '✨ Morrow Tarayıcıya Ekle';
 
     // CSS styling tab-manager.ts üzerinden insertCSS ile yapılır (CSP kısıtlamalarını aşmak için)
 
@@ -234,7 +259,7 @@ if (typeof window !== 'undefined' && window.location.hostname.includes('chromewe
           setTimeout(() => { btn.style.display = 'none'; }, 5000);
         } else {
           btn.innerText = '❌ Hata Oluştu';
-          setTimeout(() => { btn.innerText = '✨ Aura Tarayıcıya Ekle'; }, 3000);
+          setTimeout(() => { btn.innerText = '✨ Morrow Tarayıcıya Ekle'; }, 3000);
         }
       });
     };

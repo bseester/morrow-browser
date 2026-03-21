@@ -12,15 +12,18 @@ import {
   useSettingsStore,
   ACCENT_PRESETS,
   SEARCH_ENGINES,
+  GX_THEMES,
 } from '../../store/useSettingsStore';
+import ExtensionsPanel from '../Sidebar/ExtensionsPanel';
 
-type SettingsCategory = 'appearance' | 'search' | 'startup' | 'privacy' | 'about';
+type SettingsCategory = 'appearance' | 'search' | 'startup' | 'privacy' | 'extensions' | 'about';
 
 const CATEGORIES: { id: SettingsCategory; icon: string; label: string }[] = [
   { id: 'appearance', icon: '🎨', label: 'Görünüm' },
   { id: 'search', icon: '🔍', label: 'Arama Motoru' },
   { id: 'startup', icon: '🏠', label: 'Başlangıç' },
   { id: 'privacy', icon: '🛡️', label: 'Gizlilik' },
+  { id: 'extensions', icon: '🧩', label: 'Eklentiler' },
   { id: 'about', icon: 'ℹ️', label: 'Hakkında' },
 ];
 
@@ -30,8 +33,12 @@ export default function SettingsPage() {
   const {
     theme, setTheme,
     accentColor, setAccentColor,
+    gxTheme, setGxTheme,
     searchEngine, setSearchEngine,
     homepage, setHomepage,
+    tabGroupingEnabled, setTabGroupingEnabled,
+    sidebarPerformanceEnabled, setSidebarPerformanceEnabled,
+    sidebarCleanerEnabled, setSidebarCleanerEnabled,
   } = useSettingsStore();
 
   const [homepageInput, setHomepageInput] = useState(homepage);
@@ -177,6 +184,14 @@ export default function SettingsPage() {
               setTheme={setTheme}
               accentColor={accentColor}
               setAccentColor={setAccentColor}
+              gxTheme={gxTheme}
+              setGxTheme={setGxTheme}
+              tabGroupingEnabled={tabGroupingEnabled}
+              setTabGroupingEnabled={setTabGroupingEnabled}
+              sidebarPerformanceEnabled={sidebarPerformanceEnabled}
+              setSidebarPerformanceEnabled={setSidebarPerformanceEnabled}
+              sidebarCleanerEnabled={sidebarCleanerEnabled}
+              setSidebarCleanerEnabled={setSidebarCleanerEnabled}
             />
           )}
           {activeCategory === 'search' && (
@@ -198,6 +213,12 @@ export default function SettingsPage() {
               onToggleAdblock={handleToggleAdblock}
               onClearData={handleClearData}
             />
+          )}
+          {activeCategory === 'extensions' && (
+            <>
+              <SectionTitle>🧩 Eklentiler</SectionTitle>
+              <SettingCard><ExtensionsPanel /></SettingCard>
+            </>
           )}
           {activeCategory === 'about' && <AboutSection />}
         </motion.div>
@@ -298,17 +319,110 @@ function AppearanceSection({
   setTheme,
   accentColor,
   setAccentColor,
+  gxTheme,
+  setGxTheme,
+  tabGroupingEnabled,
+  setTabGroupingEnabled,
+  sidebarPerformanceEnabled,
+  setSidebarPerformanceEnabled,
+  sidebarCleanerEnabled,
+  setSidebarCleanerEnabled,
 }: {
   theme: 'dark' | 'light';
   setTheme: (t: 'dark' | 'light') => void;
   accentColor: string;
   setAccentColor: (c: string) => void;
+  gxTheme: string;
+  setGxTheme: (id: string) => void;
+  tabGroupingEnabled: boolean;
+  setTabGroupingEnabled: (b: boolean) => void;
+  sidebarPerformanceEnabled: boolean;
+  setSidebarPerformanceEnabled: (b: boolean) => void;
+  sidebarCleanerEnabled: boolean;
+  setSidebarCleanerEnabled: (b: boolean) => void;
 }) {
+  const applyGxTheme = (id: string) => {
+    const t = GX_THEMES.find(x => x.id === id);
+    if (!t) { setGxTheme(''); return; }
+    setGxTheme(id);
+    setAccentColor(t.accent);
+    // CSS custom props'u güncelle
+    const root = document.documentElement;
+    root.style.setProperty('--accent', t.accent);
+    root.style.setProperty('--bg-primary', t.bg);
+    root.style.setProperty('--bg-secondary', t.bgSecondary);
+    root.style.setProperty('--bg-tertiary', t.bgSecondary);
+  };
+
   return (
     <>
       <SectionTitle>🎨 Görünüm</SectionTitle>
 
-      {/* Tema Seçimi */}
+      {/* Renkli Temalar */}
+      <SettingCard>
+        <SettingLabel title="Renkli Temalar" subtitle="Özel renk animasyonlu tema paketleri" />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+            gap: '10px',
+            marginTop: '16px',
+          }}
+        >
+          {/* Normal mod */}
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => { setGxTheme(''); }}
+            style={{
+              borderRadius: 'var(--radius-md)',
+              border: gxTheme === '' ? '2px solid var(--accent)' : '2px solid var(--border-subtle)',
+              background: 'linear-gradient(135deg, #0a0a0f 50%, #6366f1 100%)',
+              cursor: 'pointer',
+              padding: '0',
+              overflow: 'hidden',
+              height: '72px',
+              position: 'relative',
+            }}
+          >
+            <div style={{ position: 'absolute', bottom: 6, left: 8, textAlign: 'left' }}>
+              <div style={{ fontSize: '16px' }}>🔵</div>
+              <div style={{ fontSize: '10px', color: '#fff', fontWeight: 600, marginTop: '2px' }}>Varsayılan</div>
+            </div>
+          </motion.button>
+
+          {GX_THEMES.map((t) => (
+            <motion.button
+              key={t.id}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => applyGxTheme(t.id)}
+              style={{
+                borderRadius: 'var(--radius-md)',
+                border: gxTheme === t.id ? `2px solid ${t.accent}` : '2px solid var(--border-subtle)',
+                background: t.preview,
+                cursor: 'pointer',
+                padding: '0',
+                overflow: 'hidden',
+                height: '72px',
+                position: 'relative',
+                boxShadow: gxTheme === t.id ? `0 0 12px ${t.accent}60` : 'none',
+                transition: 'box-shadow 0.2s',
+              }}
+            >
+              <div style={{ position: 'absolute', bottom: 6, left: 8, textAlign: 'left' }}>
+                <div style={{ fontSize: '16px' }}>{t.emoji}</div>
+                <div style={{ fontSize: '10px', color: '#fff', fontWeight: 600, marginTop: '2px', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{t.name}</div>
+              </div>
+              {gxTheme === t.id && (
+                <div style={{ position: 'absolute', top: 6, right: 6, width: 14, height: 14, borderRadius: '50%', background: t.accent, boxShadow: `0 0 6px ${t.accent}` }} />
+              )}
+            </motion.button>
+          ))}
+        </div>
+      </SettingCard>
+
+      {/* Tema Seçimi (Aydınlık/Karanlık) */}
       <SettingCard>
         <SettingLabel title="Tema" subtitle="Arayüz temasını seçin" />
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
@@ -386,6 +500,27 @@ function AppearanceSection({
               }}
             />
           ))}
+        </div>
+      </SettingCard>
+
+      <SettingCard>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <SettingLabel title="Sürükle & Bırak Sekme Gruplama" subtitle="Sekmeleri üst üste sürükleyerek klasör/grup oluşturmanızı sağlar" />
+          <ToggleSwitch enabled={tabGroupingEnabled} onToggle={() => setTabGroupingEnabled(!tabGroupingEnabled)} />
+        </div>
+      </SettingCard>
+
+      <SettingCard>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <SettingLabel title="Sağ Sidebar: Kontrol Panelini Göster" subtitle="Performans ve RAM kontrol aracını sol barda listeler" />
+          <ToggleSwitch enabled={sidebarPerformanceEnabled} onToggle={() => setSidebarPerformanceEnabled(!sidebarPerformanceEnabled)} />
+        </div>
+      </SettingCard>
+
+      <SettingCard>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <SettingLabel title="Sağ Sidebar: Temizleyiciyi Göster" subtitle="Tarama verilerini temizleme aracını sol barda listeler" />
+          <ToggleSwitch enabled={sidebarCleanerEnabled} onToggle={() => setSidebarCleanerEnabled(!sidebarCleanerEnabled)} />
         </div>
       </SettingCard>
     </>
@@ -636,6 +771,23 @@ function PrivacySection({
 
 /* ─── Hakkında ─── */
 function AboutSection() {
+  const [version, setVersion] = useState<string>('...loading');
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI?.system?.getVersion().then((info: any) => {
+      if (info?.version) setVersion(info.version);
+    });
+  }, []);
+
+  const handleCheck = async () => {
+    setChecking(true);
+    const res = await window.electronAPI?.system?.checkUpdate();
+    setChecking(false);
+    // Main process kendi dialog'unu gösteriyor, message boşsa alert gösterme
+    if (res?.message) alert(res.message);
+  };
+
   return (
     <>
       <SectionTitle>ℹ️ Hakkında</SectionTitle>
@@ -666,12 +818,37 @@ function AboutSection() {
           </div>
           <div style={{ textAlign: 'center' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Aura Browser
+              Morrow Browser
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Sürüm 1.0.0
+              Sürüm {version}
             </p>
           </div>
+
+          <motion.button
+            onClick={handleCheck}
+            disabled={checking}
+            whileHover={{ scale: checking ? 1 : 1.02, background: 'rgba(59, 130, 246, 0.15)' }}
+            whileTap={{ scale: checking ? 1 : 0.98 }}
+            style={{
+              padding: '10px 24px',
+              background: 'rgba(59, 130, 246, 0.1)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              color: '#3b82f6',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: checking ? 'default' : 'pointer',
+              opacity: checking ? 0.7 : 1,
+              fontFamily: 'Inter, sans-serif',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            {checking ? '🔄 Kontrol Ediliyor...' : '🔄 Güncellemeleri Denetle'}
+          </motion.button>
+
           <p
             style={{
               fontSize: '12px',

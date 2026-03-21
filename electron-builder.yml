@@ -1,5 +1,5 @@
-appId: com.aura.browser
-productName: Aura Browser
+appId: com.morrow.browser
+productName: Morrow Browser
 copyright: Copyright © 2025 bseester
 
 directories:
@@ -36,4 +36,8 @@ linux:
   icon: resources/icons/icon.png
   category: Network
 
-# Publish block removed
+# Publish configuration for auto-updates
+publish:
+  provider: github
+  owner: bseester
+  repo: morrow-browser

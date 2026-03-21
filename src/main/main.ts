@@ -21,6 +21,7 @@ app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-smooth-scrolling'); // Yumuşak kaydırma
 app.commandLine.appendSwitch('enable-oop-rasterization'); // Süreç dışı rasterization
+app.commandLine.appendSwitch('disable-quic'); // QUIC throttling'i baypas edebilir, devre dışı bırakıyoruz.
 
 // Global Medya Kontrolleri ve Donanım Video Kod Çözücü
 app.commandLine.appendSwitch('enable-features', 'HardwareMediaKeyHandling,VaapiVideoDecoder');
@@ -66,8 +67,19 @@ if (!gotLock) {
     // IPC handler'larını kaydet
     registerIPCHandlers(windowManager, adBlocker);
 
-    // Otomatik güncellemeleri başlat
-    import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
+    // Pencere görünür olduktan sonra güncelleme kontrolü başlat
+    const win = windowManager.getMainWindow();
+    if (win) {
+      win.once('ready-to-show', () => {
+        import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
+      });
+      // Pencere zaten gösterildiyse fallback
+      if (win.isVisible()) {
+        import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
+      }
+    } else {
+      import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
+    }
 
     // ─── Chrome Web Store Spoofing (Global System User Agent) ───
     const CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';

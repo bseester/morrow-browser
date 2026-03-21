@@ -7,7 +7,7 @@
  */
 
 import { useEffect } from 'react';
-import { useSettingsStore } from '../store/useSettingsStore';
+import { useSettingsStore, GX_THEMES } from '../store/useSettingsStore';
 
 /**
  * Hex renk kodundan hover varyantı ve glow varyantı üretir
@@ -31,6 +31,7 @@ function hexToVariants(hex: string) {
 export function useTheme() {
   const theme = useSettingsStore((s) => s.theme);
   const accentColor = useSettingsStore((s) => s.accentColor);
+  const gxTheme = useSettingsStore((s) => s.gxTheme);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -42,4 +43,21 @@ export function useTheme() {
     document.documentElement.style.setProperty('--accent-hover', hover);
     document.documentElement.style.setProperty('--accent-glow', glow);
   }, [accentColor]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (gxTheme) {
+      const t = GX_THEMES.find(x => x.id === gxTheme);
+      if (t) {
+        root.style.setProperty('--bg-primary', t.bg);
+        root.style.setProperty('--bg-secondary', t.bgSecondary);
+        root.style.setProperty('--bg-tertiary', t.bgSecondary);
+      }
+    } else {
+      // Eğer gxTheme yoksa style property'leri sil ki CSS fallback (dark/light) devreye girsin
+      root.style.removeProperty('--bg-primary');
+      root.style.removeProperty('--bg-secondary');
+      root.style.removeProperty('--bg-tertiary');
+    }
+  }, [gxTheme]);
 }

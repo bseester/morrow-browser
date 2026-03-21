@@ -1,4 +1,18 @@
-# Aura Browser V1.3.1 - AdBlock Integration Release
+# Morrow Browser V1.3.4 - Rebranding & Tab Grouping Release
+
+Bu sürümde uygulama ismi **Morrow Browser** olarak güncellendi ve sekme düzeninde köklü görsel/mantıksal iyileştirmeler yapıldı.
+
+### Yeni Özellikler & Değişiklikler
+- **Yeniden Markalama**: "Aura" ibareleri ve protokoller (`morrow://`) tamamen güncellendi.
+- **Sağ Tık ile Gruplama**: Bir sekmeye sağ tıklayıp **"Sağdaki ile Grupla"** diyerek anında dinamik grup oluşturabilirsiniz.
+- **Grup Görseli**: Gruplanan sekmeler küçülür ve grup sınırlarına görsel derinlik katmak adına boşluk (`12px`) ayrılır.
+
+### Hata Düzeltmeleri
+- **Main Process Crash**: Çoklu veya seri x (kapatma) tetiklemelerindeki `Object has been destroyed` kilitlenmesi giderildi.
+
+---
+
+# Morrow Browser V1.3.1 - AdBlock Integration Release
 
 Bu sürümde Aura Browser'a tam kapsamlı reklam engelleme (AdBlock) özellikleri entegre edildi.
 

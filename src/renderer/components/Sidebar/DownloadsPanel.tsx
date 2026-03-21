@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 
 export default function DownloadsPanel() {
   const [downloads, setDownloads] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'today' | 'yesterday' | 'week'>('all');
+  const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
     const api = window.electronAPI;
@@ -31,9 +34,9 @@ export default function DownloadsPanel() {
     });
 
     return () => {
-      unsubStart?.();
-      unsubProgress?.();
-      unsubComplete?.();
+      if (unsubStart) unsubStart();
+      if (unsubProgress) unsubProgress();
+      if (unsubComplete) unsubComplete();
     };
   }, []);
 
@@ -45,21 +48,96 @@ export default function DownloadsPanel() {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '100%', overflowY: 'auto', padding: '0 4px' }}>
-      <button 
-        onClick={() => window.electronAPI?.downloads?.test?.()} 
-        style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '8px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', marginBottom: '8px', fontSize: '11px', fontWeight: 500 }}
-      >
-        Test İndirmesi Başlat (README.md)
-      </button>
+  const filteredDownloads = downloads.filter(item => {
+    const matchQuery = item.filename?.toLowerCase().includes(searchQuery.toLowerCase());
+    const itemDate = new Date(item.startedAt);
+    const today = new Date();
+    const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+    
+    let matchDate = true;
+    if (selectedDate) {
+      matchDate = itemDate.toLocaleDateString('en-CA') === selectedDate;
+    } else if (quickFilter === 'today') {
+      matchDate = itemDate.toDateString() === today.toDateString();
+    } else if (quickFilter === 'yesterday') {
+      matchDate = itemDate.toDateString() === yesterday.toDateString();
+    } else if (quickFilter === 'week') {
+      const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
+      matchDate = itemDate >= weekAgo;
+    }
+    return matchQuery && matchDate;
+  });
 
-      {downloads.length === 0 ? (
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      
+      {/* ─── Sabit Üst Bölüm: Filtreler ─── */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 4px 8px' }}>
+        <button 
+          onClick={() => window.electronAPI?.downloads?.test?.()} 
+          style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '8px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '11px', fontWeight: 500 }}
+        >
+          Test İndirmesi Başlat (README.md)
+        </button>
+
+        <input 
+          type="text" 
+          placeholder="İndirmelerde ara..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '12px', width: '100%', outline: 'none', boxSizing: 'border-box' }}
+        />
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input 
+            type="date" 
+            value={selectedDate}
+            onChange={(e) => {
+              setSelectedDate(e.target.value);
+              if (e.target.value) setQuickFilter('all');
+            }}
+            style={{ flex: 1, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '11px', outline: 'none', cursor: 'pointer' }}
+          />
+          {selectedDate && (
+            <button onClick={() => setSelectedDate('')} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>✕</button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+          {(['all', 'today', 'yesterday', 'week'] as const).map((filter) => (
+            <button 
+              key={filter} 
+              onClick={() => setQuickFilter(filter)}
+              style={{
+                padding: '5px 10px',
+                fontSize: '11px',
+                borderRadius: '20px',
+                border: '1px solid var(--border-subtle)',
+                background: quickFilter === filter ? 'var(--accent)' : 'rgba(255,255,255,0.03)',
+                color: quickFilter === filter ? '#fff' : 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              {filter === 'all' && 'Tümü'}
+              {filter === 'today' && 'Bugün'}
+              {filter === 'yesterday' && 'Dün'}
+              {filter === 'week' && 'Bu Hafta'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Kaydırılabilir Alt Bölüm: Listesi ─── */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 4px 4px' }}>
+      {filteredDownloads.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '20px', textAlign: 'center' }}>
-          Henüz bir indirme yok. Dosyalarınızı indirdiğinizde burada görünecek.
+          {downloads.length === 0 ? 'Henüz bir indirme yok.' : 'Eşleşen dosya bulunamadı.'}
         </p>
       ) : (
-        downloads.map((item) => {
+        filteredDownloads.map((item) => {
           const progress = item.totalBytes > 0 ? (item.receivedBytes / item.totalBytes) * 100 : 0;
           const isFinished = item.state === 'completed' || item.state === 'cancelled';
 
@@ -68,6 +146,12 @@ export default function DownloadsPanel() {
               key={item.id}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
+              onClick={() => {
+                if (item.state === 'completed' && item.savePath) {
+                  window.electronAPI?.downloads?.open(item.savePath);
+                }
+              }}
+              whileHover={item.state === 'completed' ? { background: 'rgba(255,255,255,0.07)', scale: 1.01 } : {}}
               style={{
                 padding: '10px',
                 background: 'rgba(255,255,255,0.03)',
@@ -75,6 +159,8 @@ export default function DownloadsPanel() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '6px',
+                cursor: item.state === 'completed' ? 'pointer' : 'default',
+                transition: 'background 0.2s, transform 0.2s',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -97,21 +183,21 @@ export default function DownloadsPanel() {
                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                   {item.state === 'progressing' ? (
                     <button
-                      onClick={() => window.electronAPI?.downloads?.action(item.id, 'pause')}
+                      onClick={(e) => { e.stopPropagation(); window.electronAPI?.downloads?.action(item.id, 'pause'); }}
                       style={{ flex: 1, padding: '4px', fontSize: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', borderRadius: '4px', cursor: 'pointer' }}
                     >
                       ⏸ Duraklat
                     </button>
                   ) : (
                     <button
-                      onClick={() => window.electronAPI?.downloads?.action(item.id, 'resume')}
+                      onClick={(e) => { e.stopPropagation(); window.electronAPI?.downloads?.action(item.id, 'resume'); }}
                       style={{ flex: 1, padding: '4px', fontSize: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', borderRadius: '4px', cursor: 'pointer' }}
                     >
                       ▶️ Devam Et
                     </button>
                   )}
                   <button
-                    onClick={() => window.electronAPI?.downloads?.action(item.id, 'cancel')}
+                    onClick={(e) => { e.stopPropagation(); window.electronAPI?.downloads?.action(item.id, 'cancel'); }}
                     style={{ flex: 1, padding: '4px', fontSize: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--danger)', borderRadius: '4px', cursor: 'pointer' }}
                   >
                     ✕ İptal
@@ -127,6 +213,7 @@ export default function DownloadsPanel() {
           );
         })
       )}
+      </div>{/* scrollable list */}
     </div>
   );
 }

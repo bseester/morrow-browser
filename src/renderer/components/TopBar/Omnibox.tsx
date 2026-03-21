@@ -42,7 +42,7 @@ export default function Omnibox() {
   }, [inputValue, isFocused]);
 
   useEffect(() => {
-    if (activeTab?.url && activeTab.url !== 'about:blank' && activeTab.url !== 'aura://newtab') {
+    if (activeTab?.url && activeTab.url !== 'about:blank' && activeTab.url !== 'morrow://newtab') {
       window.electronAPI?.bookmarks?.get?.()?.then((data: any[]) => {
         const found = data?.find((b) => b.url === activeTab.url);
         if (found) {
@@ -63,7 +63,7 @@ export default function Omnibox() {
     if (!text.trim()) return;
     const urlPattern = /^(https?:\/\/)?localhost(:\d+)?(\/.*)?$|^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/i;
     let target = text.trim();
-    if (target !== 'about:blank' && !target.startsWith('chrome://') && !target.startsWith('aura://') && !target.startsWith('file://')) {
+    if (target !== 'about:blank' && !target.startsWith('chrome://') && !target.startsWith('morrow://') && !target.startsWith('file://')) {
       if (urlPattern.test(target) && !target.includes(' ')) {
         target = target.startsWith('http') ? target : `https://${target}`;
       } else {
@@ -224,7 +224,7 @@ export default function Omnibox() {
         {/* Bar Butonları (Star & AI) */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Yer İmi (Yıldız) Butonu */}
-          {activeTab?.url && activeTab.url !== 'about:blank' && activeTab.url !== 'aura://newtab' && (
+          {activeTab?.url && activeTab.url !== 'about:blank' && activeTab.url !== 'morrow://newtab' && (
             <motion.button
               type="button"
               onClick={handleBookmarkToggle}

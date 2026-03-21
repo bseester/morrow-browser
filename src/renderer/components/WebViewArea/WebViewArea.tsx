@@ -27,7 +27,7 @@ export default function WebViewArea() {
   const [newSiteUrl, setNewSiteUrl] = useState('');
 
   const workspaceId = activeWorkspaceId || 'default';
-  const storageKey = `aura_shortcuts_${workspaceId}`;
+  const storageKey = `morrow_shortcuts_${workspaceId}`;
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
@@ -53,7 +53,7 @@ export default function WebViewArea() {
     const urlPattern = /^(https?:\/\/)?localhost(:\d+)?(\/.*)?$|^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w-./?%&=]*)?$/i;
     let target = text;
     
-    if (target !== 'about:blank' && !target.startsWith('chrome://') && !target.startsWith('aura://') && !target.startsWith('file://')) {
+    if (target !== 'about:blank' && !target.startsWith('chrome://') && !target.startsWith('morrow://') && !target.startsWith('file://')) {
       if (urlPattern.test(target) && !target.includes(' ')) {
         target = target.startsWith('http') ? target : `https://${target}`;
       } else {
@@ -147,7 +147,7 @@ export default function WebViewArea() {
           )}
         </div>
         <h1 style={{ fontSize: '28px', fontWeight: 600, color: isIncognito ? '#e4e6eb' : 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-          {isIncognito ? 'Gizli Tarama' : 'Aura Browser'}
+          {isIncognito ? 'Gizli Tarama' : 'Morrow Browser'}
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '28px' }}>
           {isIncognito ? 'Bu sekmede yaptığınız aramalar geçmişe kaydedilmez.' : 'Yukarıdaki adres çubuğuna bir URL yazın veya arama yapın'}

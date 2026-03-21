@@ -11,11 +11,12 @@ import type { Tab as TabType } from '../../store/useTabStore';
 interface TabProps {
   tab: TabType;
   isActive: boolean;
+  hasSeparator?: boolean;
   onSelect: () => void;
   onClose: (e: React.MouseEvent) => void;
 }
 
-export default function Tab({ tab, isActive, onSelect, onClose }: TabProps) {
+export default function Tab({ tab, isActive, hasSeparator, onSelect, onClose }: TabProps) {
   const {
     attributes,
     listeners,
@@ -49,7 +50,7 @@ export default function Tab({ tab, isActive, onSelect, onClose }: TabProps) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      layout
+      layout={!isDragging}
       initial={{ opacity: 0, scale: 0.85, width: 0 }}
       animate={{ opacity: isDragging ? 0.9 : 1, scale: isDragging ? 1.05 : 1, width: 'auto' }}
       exit={{ opacity: 0, scale: 0.85, width: 0 }}
@@ -73,17 +74,21 @@ export default function Tab({ tab, isActive, onSelect, onClose }: TabProps) {
         padding: '0 12px',
         borderRadius: 'var(--radius-sm)',
         cursor: 'pointer',
-        minWidth: tab.isPinned ? '36px' : '100px',
-        maxWidth: tab.isPinned ? '36px' : '200px',
+        minWidth: tab.isPinned ? '36px' : tab.groupId ? '60px' : '100px',
+        maxWidth: tab.isPinned ? '36px' : tab.groupId ? '90px' : '200px',
+        flexShrink: 0,
+        marginRight: hasSeparator ? '12px' : '0px',
         fontSize: '12px',
         fontWeight: isActive ? 500 : 400,
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
         border: isActive ? '1px solid var(--border-active)' : '1px solid transparent',
-        transition: 'background var(--transition-fast), border var(--transition-fast)',
+        boxShadow: 'none',
+        transition: 'background var(--transition-fast), border var(--transition-fast), box-shadow var(--transition-fast)',
         position: 'relative',
         overflow: 'hidden',
-      }}
+        WebkitAppRegion: 'no-drag',
+      } as any}
       whileHover={{
         background: isActive ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
       }}

@@ -9,8 +9,12 @@ export const IPC_CHANNELS = {
   TAB_CLOSE: 'tab:close',
   TAB_SWITCH: 'tab:switch',
   TAB_LIST: 'tab:list',
-  TAB_UPDATE: 'tab:update',           // main → renderer bildirim
+  TAB_UPDATE: 'tab:update',
   TAB_REORDER: 'tab:reorder',
+  TAB_GROUP_CREATE: 'tab:group-create',
+  TAB_GROUP_ADD: 'tab:group-add',
+  TAB_GROUP_REMOVE: 'tab:group-remove',
+  TAB_GROUP_COLLAPSE: 'tab:group-collapse',
 
   // ─── Navigasyon ───
   NAV_GO: 'nav:go',
@@ -58,8 +62,23 @@ export const IPC_CHANNELS = {
   EXTENSION_LIST: 'extension:list',
   EXTENSION_INSTALL_CRX: 'extension:install-crx',
 
-  // ─── Genel ───
+  // ─── Genel & Sistem ───
   APP_INFO: 'app:info',
+  SYSTEM_GET_PERFORMANCE_METRICS: 'system:get-performance-metrics',
+  SYSTEM_KILL_PROCESS: 'system:kill-process',
+  SYSTEM_SET_RAM_LIMITER_ENABLED: 'system:set-ram-limiter-enabled',
+  SYSTEM_SET_RAM_HARD_LIMIT: 'system:set-ram-hard-limit',
+  SYSTEM_SET_RAM_SNOOZE_TIME: 'system:set-ram-snooze-time',
+  SYSTEM_SET_MAX_RAM_LIMIT: 'system:set-max-ram-limit',
+  SYSTEM_SET_NETWORK_LIMIT: 'system:set-network-limit',
+  APP_CHECK_UPDATE: 'app:check-update',
+
+  // ─── Temizleyici (Cleaner) ───
+  SYSTEM_GET_CACHE_SIZE: 'system:get-cache-size',
+  SYSTEM_CLEAR_CACHE: 'system:clear-cache',
+  SYSTEM_GET_COOKIES_COUNT: 'system:get-cookies-count',
+  SYSTEM_CLEAR_COOKIES: 'system:clear-cookies',
+  DOWNLOADS_CLEAR_HISTORY: 'downloads:clear-history',
 } as const;
 
 /** Tüm kanal isimlerinin tipi */

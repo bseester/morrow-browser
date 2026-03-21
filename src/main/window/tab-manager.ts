@@ -9,6 +9,7 @@ import {
   BrowserWindow,
   WebContentsView,
   session,
+  app,
   type WebContents,
 } from 'electron';
 import { IPC_CHANNELS } from '../ipc/channels';
@@ -24,6 +25,15 @@ export interface TabInfo {
   workspaceId?: string;
   isIncognito?: boolean;
   isPinned?: boolean;
+  isSnoozed?: boolean;
+  groupId?: string;
+}
+
+export interface TabGroupInfo {
+  id: string;
+  title: string;
+  color: string;
+  collapsed: boolean;
 }
 
 export class TabManager {
@@ -39,10 +49,27 @@ export class TabManager {
   private onNavigateCallback?: (url: string, title: string) => void;
   public contextMenuCallbacks = new Map<string, () => void>(); // Custom HTML ContextMenu callback map
   private pinnedTabIds: Set<number> = new Set();
+  
+  // Tab Groups logic
+  private tabGroups: Map<string, TabGroupInfo> = new Map();
+  private tabGroupIds: Map<number, string> = new Map(); // tabId -> groupId mapping
+  
+  // Performance logic fields
+  private snoozedTabs: Set<number> = new Set();
+  private tabUrls: Map<number, string> = new Map();
+  private tabTitles: Map<number, string> = new Map();
+  private tabLastAccessed: Map<number, number> = new Map();
+  private ramSnoozeMinutes: number = 0;
+  private maxRamLimitMb: number = 0;
+  private ramLimiterEnabled: boolean = false;
+  private ramHardLimit: boolean = false;
+  private networkSpeedLimitMbps: number = 0;
+  private snoozeInterval: NodeJS.Timeout | null = null;
 
   constructor(mainWindow: BrowserWindow, isIncognito: boolean = false) {
     this.mainWindow = mainWindow;
     this.isIncognito = isIncognito;
+    this.startSnoozeTimer();
   }
 
   /**
@@ -56,9 +83,10 @@ export class TabManager {
     } catch {}
 
     const tabId = ++this.tabCounter;
+    this.tabLastAccessed.set(tabId, Date.now());
 
     // Dal 4: Gizli sekme veya standart partition
-    const partition = this.isIncognito ? 'in-memory:incognito' : '';
+    const partition = this.isIncognito ? 'in-memory:incognito' : 'persist:bseester';
 
     const view = new WebContentsView({
       webPreferences: {
@@ -80,6 +108,11 @@ export class TabManager {
 
     // Pencereye ekle (henüz görünmez)
     this.mainWindow.contentView.addChildView(view);
+
+    // Ağ sınırını uygula (eğer aktifse)
+    if (this.networkSpeedLimitMbps > 0) {
+      this.applyNetworkLimitToView(view, this.networkSpeedLimitMbps);
+    }
 
     // URL'ye git
     if (url !== 'about:blank') {
@@ -119,7 +152,15 @@ export class TabManager {
     }
     this.tabs.delete(tabId);
     this.tabWorkspaces.delete(tabId);
+    this.snoozedTabs.delete(tabId);
+    this.tabUrls.delete(tabId);
+    this.tabTitles.delete(tabId);
+    this.tabLastAccessed.delete(tabId);
+    this.tabGroupIds.delete(tabId); // Remove from group mapping if exists
     this.tabOrder = this.tabOrder.filter(id => id !== tabId);
+
+    // Çıkardığımız sekme ile boşalan grupları temizle (opsiyonel ama sağlıklı)
+    this.cleanupEmptyGroups();
 
     // Aktif sekme kapatıldıysa mevcut workspace'de başka sekme bul
     if (this.activeTabId === tabId) {
@@ -182,11 +223,42 @@ export class TabManager {
       fs.appendFileSync(logPath, `\n[${new Date().toISOString()}] switchToTab called with tabId=${tabId}. Previous activeTabId=${this.activeTabId}\n`);
     } catch {}
 
-    if (!this.tabs.has(tabId)) {
+    if (!this.tabs.has(tabId) && !this.snoozedTabs.has(tabId)) {
       try {
         fs.appendFileSync(logPath, `[${new Date().toISOString()}] switchToTab ABORT: tabs map doesn't contain ${tabId}\n`);
       } catch {}
       return;
+    }
+
+    this.tabLastAccessed.set(tabId, Date.now());
+
+    // Resurrect if snoozed
+    if (this.snoozedTabs.has(tabId)) {
+      const url = this.tabUrls.get(tabId) || 'about:blank';
+      console.log(`[TabManager] Resurrecting snoozed tab ${tabId} : ${url}`);
+      
+      const partition = this.isIncognito ? 'in-memory:incognito' : 'persist:bseester';
+      const view = new WebContentsView({
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+          webviewTag: false,
+          partition,
+          plugins: true,
+        },
+      });
+
+      this.tabs.set(tabId, view);
+      this.snoozedTabs.delete(tabId);
+      this.attachWebContentsListeners(tabId, view.webContents);
+      this.mainWindow.contentView.addChildView(view);
+      
+      if (this.networkSpeedLimitMbps > 0) {
+        this.applyNetworkLimitToView(view, this.networkSpeedLimitMbps);
+      }
+      
+      view.webContents.loadURL(url);
     }
 
     // Önceki aktif sekmeyi gizle
@@ -219,7 +291,7 @@ export class TabManager {
     if (this.activeTabId === null) return;
 
     const view = this.tabs.get(this.activeTabId);
-    if (!view) return;
+    if (!view || view.webContents.isDestroyed()) return;
 
     const bounds = this.mainWindow.getContentBounds();
     const url = view.webContents.getURL();
@@ -365,19 +437,52 @@ export class TabManager {
       const wsId = this.tabWorkspaces.get(id);
       if (wsId !== this.activeWorkspace) continue; // Sadece aktif workspace
 
+      if (this.snoozedTabs.has(id)) {
+        list.push({
+          id,
+          title: this.tabTitles.get(id) || 'Uyutulmuş Sekme',
+          url: this.tabUrls.get(id) || '',
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+          workspaceId: wsId,
+          isIncognito: this.isIncognito,
+          isPinned: this.pinnedTabIds.has(id),
+          isSnoozed: true,
+          groupId: this.tabGroupIds.get(id)
+        });
+        continue;
+      }
+
       const view = this.tabs.get(id);
       if (!view) continue;
-      const wc = view.webContents;
+      const url = this.tabUrls.get(id) || view?.webContents.getURL() || 'about:blank';
+      const title = this.tabTitles.get(id) || view?.webContents.getTitle() || 'Yeni Sekme';
+      const isSnoozed = this.snoozedTabs.has(id);
+      
+      const getFaviconUrl = (url: string) => {
+        try {
+          if (!url || url === 'about:blank') return undefined;
+          const domain = new URL(url).hostname;
+          return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+        } catch {
+          return undefined;
+        }
+      };
+
       list.push({
         id,
-        title: wc.getTitle() || 'Yeni Sekme',
-        url: wc.getURL(),
-        isLoading: wc.isLoading(),
-        canGoBack: wc.canGoBack(),
-        canGoForward: wc.canGoForward(),
-        workspaceId: wsId,
+        url,
+        title,
+        isLoading: view ? view.webContents.isLoading() : false,
+        canGoBack: view ? view.webContents.canGoBack() : false,
+        canGoForward: view ? view.webContents.canGoForward() : false,
+        favicon: getFaviconUrl(url),
+        workspaceId: this.tabWorkspaces.get(id),
         isIncognito: this.isIncognito,
         isPinned: this.pinnedTabIds.has(id),
+        isSnoozed,
+        groupId: this.tabGroupIds.get(id)
       });
     }
     return list;
@@ -403,6 +508,30 @@ export class TabManager {
    * WebContents olaylarını dinler ve Renderer'a bildirim gönderir
    */
   private attachWebContentsListeners(tabId: number, wc: WebContents): void {
+    console.log(`[TabManager] attachWebContentsListeners for tab ${tabId}`);
+    
+    // Navigasyon bittiğinde sınırı tekrar uygula (Bazı siteler navigasyonla resetleyebilir)
+    wc.on('did-navigate', () => {
+      if (this.networkSpeedLimitMbps > 0) {
+        const view = this.tabs.get(tabId);
+        if (view) this.applyNetworkLimitToView(view, this.networkSpeedLimitMbps);
+      }
+    });
+
+    wc.on('dom-ready', () => {
+      if (this.networkSpeedLimitMbps > 0) {
+        const view = this.tabs.get(tabId);
+        if (view) this.applyNetworkLimitToView(view, this.networkSpeedLimitMbps);
+      }
+    });
+
+    wc.on('did-frame-finish-load', (_event, isMainFrame) => {
+      if (isMainFrame && this.networkSpeedLimitMbps > 0) {
+        const view = this.tabs.get(tabId);
+        if (view) this.applyNetworkLimitToView(view, this.networkSpeedLimitMbps);
+      }
+    });
+
     wc.on('did-finish-load', () => {
       const url = wc.getURL();
       if (url.includes('chromewebstore.google.com/detail/')) {
@@ -413,7 +542,7 @@ export class TabManager {
         if (extensionId && extensionId.length > 20) {
           // CSS Enjeksiyonu
           wc.insertCSS(`
-            #aura-install-btn {
+            #morrow-install-btn {
               position: fixed !important;
               top: 80px !important;
               right: 48px !important;
@@ -433,15 +562,15 @@ export class TabManager {
               align-items: center !important;
               gap: 8px !important;
             }
-            #aura-install-btn:hover {
+            #morrow-install-btn:hover {
               transform: translateY(-2px) !important;
               box-shadow: 0 15px 30px -5px rgba(79, 70, 229, 0.6) !important;
               filter: brightness(1.1) !important;
             }
-            #aura-install-btn:active {
+            #morrow-install-btn:active {
               transform: translateY(0) !important;
             }
-            #aura-install-btn.loading {
+            #morrow-install-btn.loading {
               opacity: 0.7 !important;
               cursor: wait !important;
             }
@@ -450,10 +579,10 @@ export class TabManager {
           // JS Enjeksiyonu (Button Ekleme & Click Listener)
           wc.executeJavaScript(`
             (function() {
-              if (document.getElementById('aura-install-btn')) return;
+              if (document.getElementById('morrow-install-btn')) return;
               const btn = document.createElement('button');
-              btn.id = 'aura-install-btn';
-              btn.innerHTML = '<span>➕</span> Aura Browser\\'a Ekle';
+              btn.id = 'morrow-install-btn';
+              btn.innerHTML = '<span>➕</span> Morrow Browser\\'a Ekle';
               
               btn.onclick = async () => {
                 if (btn.classList.contains('loading')) return;
@@ -705,6 +834,7 @@ export class TabManager {
   notifyTabUpdate(): void {
     this.sendToRenderer(IPC_CHANNELS.TAB_UPDATE, {
       tabs: this.getTabList(),
+      groups: Array.from(this.tabGroups.values()),
       activeTabId: this.activeTabId,
       activeWorkspaceId: this.activeWorkspace,
     });
@@ -766,8 +896,242 @@ export class TabManager {
    * Tüm sekmeleri temizler (uygulama kapanırken)
    */
   destroyAll(): void {
+    if (this.snoozeInterval) clearInterval(this.snoozeInterval);
     for (const [id] of this.tabs) {
       this.closeTab(id);
+    }
+  }
+
+  setRamSnoozeTime(minutes: number): void {
+    this.ramSnoozeMinutes = minutes;
+  }
+
+  setMaxRamLimit(limitMb: number): void {
+    this.maxRamLimitMb = limitMb;
+  }
+
+  setRamLimiterEnabled(enabled: boolean): void {
+    this.ramLimiterEnabled = enabled;
+  }
+
+  setRamHardLimit(hard: boolean): void {
+    this.ramHardLimit = hard;
+  }
+
+  public setNetworkSpeedLimit(limitMbps: number): void {
+    this.networkSpeedLimitMbps = limitMbps;
+    
+    // Uygulama seviyesinde (Session) sınırlama
+    const { session } = require('electron');
+    if (limitMbps <= 0) {
+      session.defaultSession.enableNetworkEmulation({
+        offline: false,
+        latency: 0,
+        downloadThroughput: -1,
+        uploadThroughput: -1,
+      });
+    } else {
+      const bps = (limitMbps * 1024 * 1024) / 8;
+      session.defaultSession.enableNetworkEmulation({
+        offline: false,
+        latency: 0,
+        downloadThroughput: bps,
+        uploadThroughput: bps,
+      });
+    }
+
+    this.applyNetworkLimitToAll(limitMbps);
+  }
+
+  private async applyNetworkLimitToView(view: any, limitMbps: number): Promise<void> {
+    const url = view.webContents.getURL();
+    console.log(`[TabManager] Applying limit ${limitMbps} Mbps to view: ${url}`);
+    
+    // File logging for verification
+    const fs = require('fs');
+    try {
+      const logMsg = `\n[${new Date().toISOString()}] Limit Request: ${limitMbps} Mbps, View URL: ${url}\n`;
+      fs.appendFileSync('c:\\Users\\bseester\\3\\network_log.txt', logMsg);
+    } catch {}
+
+    try {
+      if (limitMbps <= 0) {
+        view.webContents.session.enableNetworkEmulation({
+          offline: false,
+          latency: 0,
+          downloadThroughput: -1,
+          uploadThroughput: -1,
+        });
+        if (view.webContents.debugger.isAttached()) {
+          view.webContents.debugger.sendCommand('Network.emulateNetworkConditions', {
+            offline: false,
+            latency: 0,
+            downloadThroughput: -1,
+            uploadThroughput: -1,
+          });
+        }
+        return;
+      }
+      const bps = (limitMbps * 1024 * 1024) / 8;
+      
+      // Session level emulation (Global for this view's session)
+      view.webContents.session.enableNetworkEmulation({
+        offline: false,
+        latency: 0,
+        downloadThroughput: bps,
+        uploadThroughput: bps,
+      });
+
+      if (!view.webContents.debugger.isAttached()) {
+        try {
+          view.webContents.debugger.attach('1.3');
+        } catch (e) {
+          console.error('[TabManager] CDP Attach Error:', e);
+        }
+      }
+
+      // Debugger hazır olması için kısa bekleme
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (view.webContents.debugger.isAttached()) {
+        try {
+          // Enforce throttling by enabling network and bypassing service workers
+          await view.webContents.debugger.sendCommand('Network.enable');
+          await view.webContents.debugger.sendCommand('Network.setBypassServiceWorker', { bypass: true });
+          await view.webContents.debugger.sendCommand('Network.emulateNetworkConditions', {
+            offline: false,
+            latency: 0,
+            downloadThroughput: bps,
+            uploadThroughput: bps,
+          });
+          console.log(`[TabManager] CDP Throttle applied to ${url}: ${limitMbps} Mbps (${bps} Bps)`);
+        } catch (err) {
+          console.error('[TabManager] CDP Command Error:', err);
+        }
+      }
+    } catch (err) {
+      console.error('[TabManager] applyNetworkLimit failed:', err);
+    }
+  }
+
+  public applyNetworkLimitToAll(limitMbps: number): void {
+    this.tabs.forEach((view) => this.applyNetworkLimitToView(view, limitMbps));
+  }
+
+  private startSnoozeTimer(): void {
+    this.snoozeInterval = setInterval(() => {
+      const now = Date.now();
+      
+      // Totam RAM check
+      try {
+        const metrics = app.getAppMetrics();
+        const totalRamKB = metrics.reduce((sum: number, m: any) => {
+          if (m.type !== 'Tab') return sum;
+          const ramKB = (m.memory as any).privateBytes !== undefined 
+                        ? (m.memory as any).privateBytes 
+                        : m.memory.workingSetSize;
+          return sum + ramKB;
+        }, 0);
+        const totalMB = Math.floor(totalRamKB / 1024);
+
+        if (this.ramLimiterEnabled && this.ramHardLimit && this.maxRamLimitMb > 0 && totalMB >= this.maxRamLimitMb) {
+          console.log(`[TabManager] EMERGENCY RAM Limit: ${totalMB}MB >= ${this.maxRamLimitMb}MB`);
+          const inactive = Array.from(this.tabs.keys()).filter(id => id !== this.activeTabId);
+          for (const id of inactive) this.snoozeTab(id);
+        }
+      } catch {}
+
+      // Idle check
+      if (this.ramSnoozeMinutes > 0) {
+        for (const [id, view] of this.tabs) {
+          if (id === this.activeTabId) continue;
+          const idle = (now - (this.tabLastAccessed.get(id) || now)) / 60000;
+          if (idle >= this.ramSnoozeMinutes) this.snoozeTab(id);
+        }
+      }
+    }, 5000);
+  }
+
+  private snoozeTab(tabId: number): void {
+    const view = this.tabs.get(tabId);
+    if (!view) return;
+    const url = view.webContents.getURL();
+    if (url === 'about:blank' || url === '') return;
+
+    console.log(`[TabManager] Snoozing tab ${tabId}: ${url}`);
+    this.snoozedTabs.add(tabId);
+    this.tabUrls.set(tabId, url);
+    this.tabTitles.set(tabId, view.webContents.getTitle());
+    
+    try {
+      this.mainWindow.contentView.removeChildView(view);
+      view.webContents.close();
+    } catch (e) {
+      console.error(`[TabManager] snooze error:`, e);
+    }
+    this.tabs.delete(tabId);
+    this.notifyTabUpdate();
+  }
+
+  // ─── TAB GROUPS METHODS ───
+
+  createTabGroup(tabIds: number[], title: string = 'Yeni Grup', color: string = '#ff3040'): void {
+    const groupId = 'group-' + Date.now();
+    this.tabGroups.set(groupId, {
+      id: groupId,
+      title,
+      color,
+      collapsed: false
+    });
+    
+    tabIds.forEach(id => {
+      if (this.tabs.has(id)) {
+        this.tabGroupIds.set(id, groupId);
+      }
+    });
+    
+    // Yanyana sıralamak için tabOrder'da grupla
+    if (tabIds.length > 0) {
+      const firstIndex = this.tabOrder.indexOf(tabIds[0]);
+      if (firstIndex !== -1) {
+        const newOrder = this.tabOrder.filter(id => !tabIds.includes(id));
+        newOrder.splice(firstIndex, 0, ...tabIds);
+        this.tabOrder = newOrder;
+      }
+    }
+    
+    this.notifyTabUpdate();
+  }
+
+  addTabToGroup(tabId: number, groupId: string): void {
+    if (this.tabs.has(tabId) && this.tabGroups.has(groupId)) {
+      this.tabGroupIds.set(tabId, groupId);
+      this.notifyTabUpdate();
+    }
+  }
+
+  removeTabFromGroup(tabId: number): void {
+    if (this.tabGroupIds.has(tabId)) {
+      this.tabGroupIds.delete(tabId);
+      this.cleanupEmptyGroups();
+      this.notifyTabUpdate();
+    }
+  }
+
+  toggleGroupCollapse(groupId: string): void {
+    const group = this.tabGroups.get(groupId);
+    if (group) {
+      group.collapsed = !group.collapsed;
+      this.notifyTabUpdate();
+    }
+  }
+
+  private cleanupEmptyGroups(): void {
+    const activeGroups = new Set(this.tabGroupIds.values());
+    for (const groupId of this.tabGroups.keys()) {
+      if (!activeGroups.has(groupId)) {
+        this.tabGroups.delete(groupId);
+      }
     }
   }
 }
