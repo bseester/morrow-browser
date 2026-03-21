@@ -126,6 +126,7 @@ const electronAPI = {
     checkUpdate: () => ipcRenderer.invoke('app:check-update'),
     setNetworkLimit: (limit: number) => ipcRenderer.invoke('system:set-network-limit', limit),
     setRamSnooze: (minutes: number) => ipcRenderer.invoke('system:set-ram-snooze', minutes),
+    setMaxRamLimit: (limit: number) => ipcRenderer.invoke('system:set-max-ram-limit', limit),
   },
   downloads: {
     get: () => ipcRenderer.invoke('downloads:get'),

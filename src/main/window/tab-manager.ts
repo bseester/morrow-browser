@@ -40,6 +40,7 @@ export class TabManager {
   private contextMenuCallbacks = new Map<string, () => void>(); // Custom HTML ContextMenu callback map
   private pinnedTabIds: Set<number> = new Set();
   private ramSnoozeMinutes: number = 0;
+  private maxRamLimitMb: number = 0;
   private tabLastAccessed: Map<number, number> = new Map();
   private snoozedTabs: Set<number> = new Set();
   private tabUrls: Map<number, string> = new Map();
@@ -795,10 +796,40 @@ export class TabManager {
     console.log(`[TabManager] RAM Snooze time set to ${minutes} mins`);
   }
 
+  setMaxRamLimit(limitMb: number): void {
+    this.maxRamLimitMb = limitMb;
+    console.log(`[TabManager] Max RAM Limit set to ${limitMb} MB`);
+  }
+
   private startSnoozeTimer(): void {
     this.snoozeInterval = setInterval(() => {
-      if (this.ramSnoozeMinutes <= 0) return;
       const now = Date.now();
+      const { app } = require('electron');
+
+      // ─── 1. Kademe: Acil Durum Toplam RAM Limiti ───
+      try {
+        const metrics = app.getAppMetrics();
+        const totalWorkingSetKB = metrics.reduce((sum: number, m: any) => sum + m.memory.workingSetSize, 0);
+        const totalAppRamMB = Math.floor(totalWorkingSetKB / 1024);
+
+        if (this.maxRamLimitMb > 0 && totalAppRamMB >= this.maxRamLimitMb) {
+          console.log(`[TabManager] EMERGENCY: RAM limit exceeded (${totalAppRamMB}MB >= ${this.maxRamLimitMb}MB). Snoozing oldest tab.`);
+          
+          const inactiveTabs = Array.from(this.tabs.keys())
+            .filter(id => id !== this.activeTabId && !this.snoozedTabs.has(id))
+            .sort((a, b) => (this.tabLastAccessed.get(a) || 0) - (this.tabLastAccessed.get(b) || 0));
+
+          if (inactiveTabs.length > 0) {
+            this.snoozeTab(inactiveTabs[0]); // En eski pasif sekmeyi uyut
+            return; // Bu turda sadece 1 adet uyutmak yeterli (cycle freni)
+          }
+        }
+      } catch (e) {
+        console.error('[TabManager] RAM Metrics calculation failed', e);
+      }
+
+      // ─── 2. Kademe: Süreye Dayalı Sekme Uyutma (Tab Snooze) ───
+      if (this.ramSnoozeMinutes <= 0) return;
 
       for (const [id, view] of this.tabs) {
         if (id === this.activeTabId) continue;
@@ -811,7 +842,7 @@ export class TabManager {
           this.snoozeTab(id);
         }
       }
-    }, 30000); // 30 saniyede bir kontrol (test edilebilirliği artırmak için)
+    }, 15000); // 15 saniyede bir kontrol (Acil durumlar için dah hızlı)
   }
 
   private snoozeTab(tabId: number): void {

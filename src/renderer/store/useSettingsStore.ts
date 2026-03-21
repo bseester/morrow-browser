@@ -41,6 +41,7 @@ interface SettingsState {
   // Performans
   ramSnoozeTime: number; // 0 = Kapalı, dakika cinsinden
   networkSpeedLimit: number; // 0 = Sınırsız, Mbps cinsinden
+  maxRamLimit: number; // 0 = Sınırsız, MB cinsinden
 
   // Aksiyonlar
   toggleSidebar: () => void;
@@ -52,6 +53,7 @@ interface SettingsState {
   setAdblockEnabled: (enabled: boolean) => void;
   setRamSnoozeTime: (time: number) => void;
   setNetworkSpeedLimit: (limit: number) => void;
+  setMaxRamLimit: (limit: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -66,6 +68,7 @@ export const useSettingsStore = create<SettingsState>()(
       adblockEnabled: true,
       ramSnoozeTime: 0,
       networkSpeedLimit: 0,
+      maxRamLimit: 0,
 
       toggleSidebar: () =>
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
@@ -93,6 +96,9 @@ export const useSettingsStore = create<SettingsState>()(
 
       setNetworkSpeedLimit: (limit) =>
         set({ networkSpeedLimit: limit }),
+
+      setMaxRamLimit: (limit) =>
+        set({ maxRamLimit: limit }),
     }),
     {
       name: 'morrow-settings',
@@ -106,6 +112,7 @@ export const useSettingsStore = create<SettingsState>()(
         adblockEnabled: state.adblockEnabled,
         ramSnoozeTime: state.ramSnoozeTime,
         networkSpeedLimit: state.networkSpeedLimit,
+        maxRamLimit: state.maxRamLimit,
       }),
     }
   )

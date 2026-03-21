@@ -631,4 +631,8 @@ export function registerIPCHandlers(windowManager: WindowManager, adBlocker: AdB
   ipcMain.handle('system:set-ram-snooze', (_event, minutes: number) => {
     getTabManager()?.setRamSnoozeTime(minutes);
   });
+
+  ipcMain.handle('system:set-max-ram-limit', (_event, limitMb: number) => {
+    getTabManager()?.setMaxRamLimit(limitMb);
+  });
 }
