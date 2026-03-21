@@ -40,6 +40,13 @@ npm run package:win
 
 Bu başlık altında son yapılan görsel, işlevsel ve kararlılık güncellemeleri listelenmektedir:
 
+### 🌟 v1.3.2 - İndirmeler ve Geçmiş Modernizasyonu 🎉
+- 📥 **Tek Tıkla Dosya Açma**: İndirme tamamlandığında dosyayı yan panelden tek tıkla anında açabilirsiniz.
+- 🔍 **Gelişmiş Arama**: İndirmeler ve geçmiş üzerine eklenen akıllı metin arama çubuğu ile her şeyi saniyeler içinde bulun.
+- 📅 **Hızlı Tarih Hapları (Pills)**: Tarih yazmaya gerek kalmadan 'Tümü', 'Bugün', 'Dün', 'Bu Hafta' gibi butonlarla dinamik süzme yapabilirsiniz.
+- 🛡️ **Geliştirilmiş AdBlock**: Reklam engelleyicinin durumu artık sayfalarda anında etkili oluyor.
+- 🔄 **Manuel Güncelleme Kontrolü**: Ayarlar > Hakkında menüsüne 'Güncellemeleri Denetle' fonksiyonu eklendi.
+
 ### 🔍 1. Adres Çubuğu (Omnibox) & Öneriler
 - **Dinamik İkonlar:** Arama önerileri tipine göre (**🎵 Müzik**, **🌐 Web**, **🔍 Arama**) otomatik rozet kazanır.
 - **Split Metin Alanı:** Okunabilirliği artırmak adına öneriler iki satıra bölünür.
