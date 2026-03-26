@@ -1,3 +1,16 @@
+# Morrow Browser V1.3.5 - Omnibox & AdBlock Fixes
+Bu sürümde arama çubuğuna entegrasyonlar sağlanmış ve tarayıcının çekirdek özelliklerindeki bazı ufak pürüzler giderilmiştir.
+
+### Yeni Özellikler & Değişiklikler
+- **Arama Çubuğu (Omnibox) Geçmiş Entegrasyonu**: Artık adres çubuğundan doğrudan kendi arama geçmişinizi anında tarayabilirsiniz. Bulunan geçmiş sonuçları `🕒` (saat) ikonuyla gösterilir ve eş zamanlı olarak web'den gelen sonuçlarla harmanlanır.
+
+### Hata Düzeltmeleri
+- **Ayarlar Ekranında Z-Index Hatası**: `/settings` (Ayarlar) sayfası açıldığında arka plandaki sekmelerin arayüzü örtmesi hatası `TabManager` optimizasyonlarıyla düzeltildi.
+- **Kategorik Adblock Engeli**: Sekme oluşturulma Partition'ları düzeltilerek webRequest eklentilerinin (Adblock v.b) her sekmede %100 istikrarla çalışması güvence altına alındı.
+- **Geçmiş (History)**: Sayfalar arası dolaşımın veritabanına işlenmemesi durumu TabManager IPC kanalları kullanılarak onarıldı. Artık verileriniz başarıyla tutuluyor.
+
+---
+
 # Morrow Browser V1.3.4 - Rebranding & Tab Grouping Release
 
 Bu sürümde uygulama ismi **Morrow Browser** olarak güncellendi ve sekme düzeninde köklü görsel/mantıksal iyileştirmeler yapıldı.
@@ -12,4 +25,4 @@ Bu sürümde uygulama ismi **Morrow Browser** olarak güncellendi ve sekme düze
 - **Main Process Crash**: Çoklu veya seri x (kapatma) tetiklemelerindeki `Object has been destroyed` kilitlenmesi giderildi.
 
 ---
-*Aura Browser ile daha temiz ve hızlı bir web deneyimi sizi bekliyor!*
+*Morrow Browser ile daha temiz ve hızlı bir web deneyimi sizi bekliyor!*

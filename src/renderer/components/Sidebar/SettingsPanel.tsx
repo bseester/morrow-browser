@@ -8,7 +8,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 
 export default function SettingsPanel() {
   const [adblockEnabled, setAdblockEnabled] = useState<boolean>(true);
-  const [version, setVersion] = useState<string>('1.3.4');
+  const [version, setVersion] = useState<string>('1.3.5');
   const { tabGroupingEnabled, setTabGroupingEnabled } = useSettingsStore();
 
   useEffect(() => {
