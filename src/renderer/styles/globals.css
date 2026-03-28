@@ -2,56 +2,60 @@
 
 /* ─── Ortak Değişkenler (Tema-bağımsız) ─── */
 :root {
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── Koyu Tema ─── */
+/* ─── Koyu Tema (Premium Gradient) ─── */
 [data-theme="dark"] {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-tertiary: #1a1a26;
-  --bg-glass: rgba(18, 18, 26, 0.72);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-active: rgba(255, 255, 255, 0.12);
-  --text-primary: #e8e8ed;
-  --text-secondary: #8b8b9e;
-  --text-muted: #5a5a6e;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-glow: rgba(99, 102, 241, 0.25);
+  --bg-primary: #08080e;
+  --bg-secondary: rgba(14, 14, 22, 0.75);
+  --bg-tertiary: rgba(22, 22, 36, 0.8);
+  --bg-glass: rgba(14, 14, 26, 0.55);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-active: rgba(139, 92, 246, 0.3);
+  --text-primary: #e8e8f0;
+  --text-secondary: #9590b8;
+  --text-muted: #5a5578;
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-glow: rgba(139, 92, 246, 0.2);
   --danger: #ef4444;
   --success: #22c55e;
   --warning: #f59e0b;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
-  --glass-strong-bg: rgba(18, 18, 26, 0.88);
+  --scrollbar-thumb: rgba(139, 92, 246, 0.15);
+  --scrollbar-thumb-hover: rgba(139, 92, 246, 0.3);
+  --glass-strong-bg: rgba(14, 14, 24, 0.88);
+  --sidebar-bg: rgba(12, 10, 22, 0.65);
+  --topbar-bg: rgba(12, 10, 22, 0.55);
 }
 
 /* ─── Aydınlık Tema ─── */
 [data-theme="light"] {
-  --bg-primary: #f5f5f7;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #e8e8ed;
-  --bg-glass: rgba(255, 255, 255, 0.78);
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-active: rgba(0, 0, 0, 0.15);
+  --bg-primary: #f0f0f5;
+  --bg-secondary: rgba(255, 255, 255, 0.85);
+  --bg-tertiary: rgba(235, 235, 245, 0.9);
+  --bg-glass: rgba(255, 255, 255, 0.65);
+  --border-subtle: rgba(0, 0, 0, 0.07);
+  --border-active: rgba(139, 92, 246, 0.2);
   --text-primary: #1a1a2e;
   --text-secondary: #5a5a6e;
   --text-muted: #8b8b9e;
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --accent-glow: rgba(99, 102, 241, 0.2);
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-glow: rgba(139, 92, 246, 0.15);
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
-  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb: rgba(139, 92, 246, 0.15);
+  --scrollbar-thumb-hover: rgba(139, 92, 246, 0.3);
   --glass-strong-bg: rgba(255, 255, 255, 0.92);
+  --sidebar-bg: rgba(255, 255, 255, 0.75);
+  --topbar-bg: rgba(255, 255, 255, 0.7);
 }
 
 /* ─── Global Reset ─── */
@@ -91,8 +95,8 @@ html, body, #root {
 /* ─── Glassmorphism Yardımcıları ─── */
 .glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--border-subtle);
 }
 
@@ -105,8 +109,8 @@ html, body, #root {
 
 /* ─── Scrollbar Yeniden Tasarımı ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -115,7 +119,7 @@ html, body, #root {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -133,10 +137,27 @@ html, body, #root {
   50% { box-shadow: 0 0 0 8px transparent; }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .animate-fade-in {
   animation: fadeIn var(--transition-smooth) ease-out;
 }
 
 .animate-pulse-glow {
   animation: pulseGlow 2s infinite;
+}
+
+/* ─── Home Search ─── */
+.home-search-input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* ─── Shortcut Hover Delete ─── */
+.shortcut-circle:hover ~ .shortcut-delete,
+.shortcut-delete:hover {
+  display: flex !important;
 }

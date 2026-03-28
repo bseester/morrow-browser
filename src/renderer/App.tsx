@@ -52,7 +52,7 @@ function App() {
               width: '100%',
               display: 'flex',
               flexDirection: 'column',
-              background: 'var(--bg-primary)',
+              background: 'radial-gradient(ellipse at 20% 50%, rgba(120, 40, 200, 0.18) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(60, 100, 255, 0.12) 0%, transparent 50%), radial-gradient(ellipse at 50% 90%, rgba(200, 50, 150, 0.1) 0%, transparent 50%), var(--bg-primary)',
               overflow: 'hidden',
               position: 'relative',
             }}

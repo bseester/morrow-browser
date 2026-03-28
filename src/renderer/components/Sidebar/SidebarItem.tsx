@@ -1,5 +1,5 @@
 /**
- * SidebarItem — Kenar çubuğu tek öğe bileşeni
+ * SidebarItem — Kenar çubuğu tek öğe bileşeni (Premium Glassmorphism)
  */
 
 import { motion } from 'framer-motion';
@@ -16,16 +16,16 @@ export default function SidebarItem({ icon, label, isActive, onClick, badge }: S
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ background: 'rgba(255,255,255,0.06)' }}
-      whileTap={{ scale: 0.92 }}
+      whileHover={{ background: 'rgba(139, 92, 246, 0.1)' }}
+      whileTap={{ scale: 0.9 }}
       title={label}
       style={{
         width: '40px',
         height: '40px',
         borderRadius: 'var(--radius-md)',
         border: 'none',
-        background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-        color: isActive ? 'var(--accent-hover)' : 'var(--text-secondary)',
+        background: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+        color: isActive ? '#a78bfa' : 'var(--text-secondary)',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -33,7 +33,8 @@ export default function SidebarItem({ icon, label, isActive, onClick, badge }: S
         fontSize: '18px',
         padding: 0,
         position: 'relative',
-        transition: 'color var(--transition-fast)',
+        transition: 'all var(--transition-fast)',
+        boxShadow: isActive ? '0 0 12px rgba(139, 92, 246, 0.15)' : 'none',
       }}
     >
       {/* Aktif çizgi göstergesi */}
@@ -46,7 +47,8 @@ export default function SidebarItem({ icon, label, isActive, onClick, badge }: S
             width: '3px',
             height: '20px',
             borderRadius: '2px',
-            background: 'var(--accent)',
+            background: 'linear-gradient(180deg, #8b5cf6, #ec4899)',
+            boxShadow: '0 0 8px rgba(139, 92, 246, 0.5)',
           }}
           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
         />
@@ -64,7 +66,7 @@ export default function SidebarItem({ icon, label, isActive, onClick, badge }: S
             width: '16px',
             height: '16px',
             borderRadius: '50%',
-            background: 'var(--danger)',
+            background: 'linear-gradient(135deg, #ef4444, #f97316)',
             color: '#fff',
             fontSize: '9px',
             fontWeight: 700,
@@ -72,6 +74,7 @@ export default function SidebarItem({ icon, label, isActive, onClick, badge }: S
             alignItems: 'center',
             justifyContent: 'center',
             lineHeight: 1,
+            boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
           }}
         >
           {badge > 99 ? '99+' : badge}

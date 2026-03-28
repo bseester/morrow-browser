@@ -81,8 +81,8 @@ export default function Tab({ tab, isActive, hasSeparator, onSelect, onClose }: 
         fontSize: '12px',
         fontWeight: isActive ? 500 : 400,
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-        background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-        border: isActive ? '1px solid var(--border-active)' : '1px solid transparent',
+        background: isActive ? 'rgba(139, 92, 246, 0.12)' : 'transparent',
+        border: isActive ? '1px solid rgba(139, 92, 246, 0.25)' : '1px solid transparent',
         boxShadow: 'none',
         transition: 'background var(--transition-fast), border var(--transition-fast), box-shadow var(--transition-fast)',
         position: 'relative',
@@ -90,7 +90,7 @@ export default function Tab({ tab, isActive, hasSeparator, onSelect, onClose }: 
         WebkitAppRegion: 'no-drag',
       } as any}
       whileHover={{
-        background: isActive ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+        background: isActive ? 'rgba(139, 92, 246, 0.12)' : 'rgba(255,255,255,0.04)',
       }}
     >
       {/* Yükleme çubuğu */}

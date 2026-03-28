@@ -181,7 +181,7 @@ export default function Omnibox() {
       <motion.div
         animate={{
           borderColor: isFocused ? 'var(--accent)' : 'var(--border-subtle)',
-          boxShadow: isFocused ? '0 0 0 3px var(--accent-glow)' : '0 0 0 0 transparent',
+          boxShadow: isFocused ? '0 0 0 3px rgba(139, 92, 246, 0.2)' : '0 0 0 0 transparent',
         }}
         transition={{ duration: 0.15 }}
         style={{
@@ -191,7 +191,8 @@ export default function Omnibox() {
           height: '36px',
           borderRadius: '18px',
           border: '1px solid var(--border-subtle)',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'rgba(255,255,255,0.03)',
+          backdropFilter: 'blur(10px)',
           padding: '0 14px',
           transition: 'background var(--transition-fast)',
         }}
@@ -323,14 +324,14 @@ export default function Omnibox() {
             whileHover={{ scale: 1.05, background: 'rgba(255,255,255,0.08)' }}
             whileTap={{ scale: 0.95 }}
             style={{
-              background: 'rgba(99, 102, 241, 0.1)',
-              border: '1px solid rgba(99, 102, 241, 0.2)',
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.15))',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
               borderRadius: '14px',
               padding: '3px 10px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              color: 'var(--accent)',
+              color: '#a78bfa',
               fontSize: '11px',
               fontWeight: 600,
               cursor: 'pointer',
