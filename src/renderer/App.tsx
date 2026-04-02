@@ -17,6 +17,7 @@ import DownloadsPage from './components/Pages/DownloadsPage';
 import PerformanceOverlay from './components/PerformanceOverlay';
 import ChromeMenuOverlay from './components/TopBar/ChromeMenuOverlay';
 import PasswordPromptOverlay from './components/TopBar/PasswordPromptOverlay';
+import TranslatePromptOverlay from './components/TopBar/TranslatePromptOverlay';
 import { useTabStore } from './store/useTabStore';
 import { useIPC } from './hooks/useIPC';
 import { useKeyboard } from './hooks/useKeyboard';
@@ -79,6 +80,7 @@ function App() {
       <Route path="/downloads" element={<DownloadsPage />} />
       <Route path="/chromemenu-overlay" element={<ChromeMenuOverlay />} />
       <Route path="/password-prompt-overlay" element={<PasswordPromptOverlay />} />
+      <Route path="/translate-prompt-overlay" element={<TranslatePromptOverlay />} />
     </Routes>
   );
 }

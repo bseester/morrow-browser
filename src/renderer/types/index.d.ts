@@ -19,6 +19,9 @@ declare global {
           removeTab: (tabId: number) => Promise<void>;
           toggleCollapse: (groupId: string) => Promise<void>;
         };
+        translate: () => Promise<void>;
+        toggleTranslatePrompt: (bounds: { x: number, y: number }) => Promise<void>;
+        closeTranslatePrompt: () => Promise<void>;
       };
       system: OriginalElectronAPI['system'] & {
         killProcess: (pid: number) => Promise<boolean>;
@@ -32,3 +35,13 @@ declare global {
 }
 
 export {};
+
+declare module "*.png" {
+  const value: string;
+  export default value;
+}
+
+declare module "*.svg" {
+  const value: string;
+  export default value;
+}

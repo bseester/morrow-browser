@@ -141,7 +141,11 @@ export function checkCustomVersion(manual: boolean = false, parentWin?: any): vo
 
   const remoteUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/version.json?t=${Date.now()}`;
 
-  const request = net.request(remoteUrl);
+  const request = net.request({
+    method: 'GET',
+    url: remoteUrl,
+    redirect: 'follow'
+  });
   request.on('response', (res) => {
     if (res.statusCode !== 200) {
       if (manual) dialog.showMessageBox({ type: 'error', buttons: ['Tamam'], title: 'Hata', message: 'Sunucuya ulaşılamadı.' });

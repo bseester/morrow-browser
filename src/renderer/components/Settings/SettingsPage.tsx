@@ -1174,6 +1174,40 @@ function ShortcutsSection({
            * Kısayol kaydederken CTRL, SHIFT gibi yardımcı tuşları ve bir harf tuşunu birlikte kullanmanız önerilir.
          </p>
       </div>
+
+      <div style={{ marginTop: '24px' }}>
+        <SettingCard>
+          <SettingLabel title="Tarayıcı Kısayolları" subtitle="Morrow'u daha hızlı kullanmanızı sağlayan klavye kısayolları" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px', marginTop: '20px' }}>
+            {[
+              { label: 'Pencereyi Kapat', keys: ['Ctrl', 'Shift', 'W'] },
+              { label: 'Sonraki Sekme', keys: ['Ctrl', 'Tab'] },
+              { label: 'Önceki Sekme', keys: ['Ctrl', 'Shift', 'Tab'] },
+              { label: 'Çıkış', keys: ['Alt', 'F4'] },
+              { label: 'Geri', keys: ['Alt', 'Backspace'] },
+              { label: 'İleri', keys: ['Shift', 'Backspace'] },
+              { label: 'Yenile (Önbelleksiz)', keys: ['Ctrl', 'Shift', 'R'] },
+              { label: 'Yüklemeyi Durdur', keys: ['Esc'] },
+              { label: 'Otomatik www. / .com', keys: ['Ctrl', 'Enter'] },
+              { label: 'Adresi Yeni Sekmede Aç', keys: ['Alt', 'Enter'] },
+              { label: 'Yer İmleri Çubuğu Gizle/Göster', keys: ['Ctrl', 'Shift', 'B'] },
+              { label: 'Sayfayı Yer İmlerine Ekle', keys: ['Ctrl', 'D'] },
+              { label: 'Sayfa Kaynağını Görüntüle', keys: ['Ctrl', 'U'] },
+              { label: 'Tam Ekran', keys: ['F11'] },
+              { label: 'Geliştirici Araçları', keys: ['F12'] }
+            ].map((sc, i) => (
+               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{sc.label}</span>
+                 <div style={{ display: 'flex', gap: '6px' }}>
+                   {sc.keys.map((k, j) => (
+                     <span key={j} style={{ padding: '4px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }}>{k}</span>
+                   ))}
+                 </div>
+               </div>
+            ))}
+          </div>
+        </SettingCard>
+      </div>
     </>
   );
 }

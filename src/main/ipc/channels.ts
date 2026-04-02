@@ -90,6 +90,11 @@ export const IPC_CHANNELS = {
   // Custom Additions
   NAV_FAVICON_UPDATED: 'nav:favicon-updated',
   TAB_LIST_UPDATED: 'tab:list-updated',
+
+  // Translation
+  TAB_TRANSLATE: 'tab:translate',
+  TAB_TRANSLATE_TOGGLE: 'tab:translate-toggle',
+  TAB_TRANSLATE_CLOSE: 'tab:translate-close',
 } as const;
 
 /** Tüm kanal isimlerinin tipi */

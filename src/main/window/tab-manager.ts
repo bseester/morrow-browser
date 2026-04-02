@@ -458,6 +458,102 @@ export class TabManager {
     wc?.stop();
   }
 
+  async translateActiveTab(): Promise<void> {
+    const wc = this.getActiveWebContents();
+    if (!wc) return;
+
+    try {
+      console.log('[TabManager] Starting Morrow Translation (Lingva-based)...');
+
+      // 1. Sayfadaki metin düğümlerini topla
+      const textNodes = await wc.executeJavaScript(`
+        (() => {
+          const nodes = [];
+          const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+              const parent = node.parentElement;
+              if (!parent) return NodeFilter.FILTER_REJECT;
+              const tag = parent.tagName.toLowerCase();
+              const style = window.getComputedStyle(parent);
+              if (['script', 'style', 'noscript', 'code', 'pre'].includes(tag)) return NodeFilter.FILTER_REJECT;
+              if (style.display === 'none' || style.visibility === 'hidden') return NodeFilter.FILTER_REJECT;
+              if (!node.textContent.trim()) return NodeFilter.FILTER_REJECT;
+              return NodeFilter.FILTER_ACCEPT;
+            }
+          });
+
+          let node;
+          let index = 0;
+          while (node = walker.nextNode()) {
+            node._morrow_idx = index;
+            nodes.push({ index, text: node.textContent.trim() });
+            index++;
+          }
+          return nodes;
+        })()
+      `);
+
+      if (!textNodes || textNodes.length === 0) {
+        console.log('[TabManager] No translatable text found.');
+        return;
+      }
+
+      // Lingva API'yi electron.net ile çağır (main process'te fetch yok)
+      const { net } = require('electron');
+      const lingvaFetch = (text: string): Promise<string> => {
+        return new Promise((resolve) => {
+          try {
+            const encoded = encodeURIComponent(text);
+            const url = `https://lingva.ml/api/v1/auto/tr/${encoded}`;
+            const req = net.request({ url, method: 'GET' });
+            let body = '';
+            req.on('response', (res: any) => {
+              res.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+              res.on('end', () => {
+                try {
+                  const json = JSON.parse(body);
+                  resolve(json?.translation || text);
+                } catch { resolve(text); }
+              });
+            });
+            req.on('error', () => resolve(text));
+            req.end();
+          } catch { resolve(text); }
+        });
+      };
+
+      // 2. Metinleri parçalar (chunks) halinde çevir
+      const chunkSize = 20;
+      for (let i = 0; i < textNodes.length; i += chunkSize) {
+        const chunk = textNodes.slice(i, i + chunkSize);
+
+        const translations = await Promise.all(chunk.map(async (item: any) => {
+          const translated = await lingvaFetch(item.text);
+          return { index: item.index, translated };
+        }));
+
+        // 3. Çevrilen parçayı sayfaya anında yansıt
+        await wc.executeJavaScript(`
+          (() => {
+            const translations = ${JSON.stringify(translations)};
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+            let node;
+            while (node = walker.nextNode()) {
+              const found = translations.find(t => t.index === node._morrow_idx);
+              if (found) {
+                node.textContent = found.translated;
+                delete node._morrow_idx;
+              }
+            }
+          })()
+        `);
+      }
+
+      console.log('[TabManager] Translation completed successfully.');
+    } catch (err) {
+      console.error('[TabManager] Translation error:', err);
+    }
+  }
   // ─── Yardımcılar ───
 
   getActiveWebContents(): WebContents | null {

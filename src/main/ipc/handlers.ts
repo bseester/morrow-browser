@@ -1265,4 +1265,64 @@ export function registerIPCHandlers(windowManager: WindowManager, adBlocker: AdB
     }
     return null;
   });
+
+  // ─── Translation Handlers ───
+  let translateOverlayWin: Electron.BrowserWindow | null = null;
+
+  ipcMain.handle(IPC_CHANNELS.TAB_TRANSLATE_TOGGLE, (_event, bounds: { x: number, y: number }) => {
+    const x = Math.floor(bounds.x);
+    const y = Math.floor(bounds.y);
+    
+    const win = translateOverlayWin;
+    if (win && !win.isDestroyed()) {
+      if (win.isVisible()) {
+        win.hide();
+      } else {
+        win.setPosition(x, y);
+        win.show();
+      }
+      return;
+    }
+
+    const { BrowserWindow } = require('electron');
+    const path = require('path');
+    
+    translateOverlayWin = new BrowserWindow({
+      width: 320,
+      height: 200,
+      x: x,
+      y: y,
+      frame: false,
+      transparent: true,
+      hasShadow: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+      },
+    });
+
+    const url = process.env.NODE_ENV === 'development' || !app.isPackaged
+      ? 'http://localhost:5173#/translate-prompt-overlay'
+      : `file://${path.join(__dirname, '..', '..', 'renderer', 'index.html')}#/translate-prompt-overlay`;
+
+    translateOverlayWin?.loadURL(url);
+
+    translateOverlayWin?.on('blur', () => {
+      translateOverlayWin?.hide();
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAB_TRANSLATE_CLOSE, () => {
+    if (translateOverlayWin && !translateOverlayWin.isDestroyed()) {
+      translateOverlayWin.hide();
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAB_TRANSLATE, () => {
+    getTabManager()?.translateActiveTab();
+  });
 }

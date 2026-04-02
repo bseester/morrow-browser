@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTabStore } from '../../store/useTabStore';
 import { useSettingsStore, SEARCH_ENGINES } from '../../store/useSettingsStore';
-import { Star, MonitorPlay, Sparkles, Key } from 'lucide-react';
+import { Star, MonitorPlay, Sparkles, Key, Languages } from 'lucide-react';
 
 export default function Omnibox() {
   const [inputValue, setInputValue] = useState('');
@@ -21,6 +21,7 @@ export default function Omnibox() {
   const { tabs, activeTabId } = useTabStore();
   const [passwordPrompt, setPasswordPrompt] = useState<{ origin: string, username: string, password: string } | null>(null);
   const keyButtonRef = useRef<HTMLButtonElement>(null);
+  const translateButtonRef = useRef<HTMLButtonElement>(null);
 
   // Aktif sekmenin URL'ini göster
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -233,9 +234,9 @@ export default function Omnibox() {
               transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
               style={{ display: 'inline-block' }}
             >
-              ◐
+              ⚪
             </motion.span>
-          ) : isFocused ? '⌕' : '🔒'}
+          ) : isFocused ? '🔍' : '🕒'}
         </div>
 
         {/* Input */}
@@ -271,6 +272,7 @@ export default function Omnibox() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             whileHover={{ color: 'var(--danger)' }}
+            whileTap={{ scale: 0.9 }}
             style={{
               background: 'none',
               border: 'none',
@@ -361,6 +363,35 @@ export default function Omnibox() {
 
         {/* Bar Butonları (AI, PiP ve diğerleri) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <motion.button
+            type="button"
+            ref={translateButtonRef}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!translateButtonRef.current) return;
+              const rect = translateButtonRef.current.getBoundingClientRect();
+              const x = window.screenX + rect.right - 320;
+              const y = window.screenY + rect.bottom + 4;
+              window.electronAPI?.tabs?.toggleTranslatePrompt?.({ x, y });
+            }}
+            whileHover={{ scale: 1.15, color: 'var(--accent)' }}
+            whileTap={{ scale: 0.9 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'color var(--transition-fast)',
+            }}
+            title="Sayıfayı Çevir"
+          >
+            <Languages size={15} />
+          </motion.button>
+
           {/* AI Sparkle Butonu */}
           <motion.button
             type="button"

@@ -51,7 +51,13 @@ const electronAPI = {
         ipcRenderer.invoke(IPC_CHANNELS.TAB_GROUP_REMOVE, tabId),
       toggleCollapse: (groupId: string) =>
         ipcRenderer.invoke(IPC_CHANNELS.TAB_GROUP_COLLAPSE, groupId),
-    }
+    },
+    translate: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAB_TRANSLATE),
+    toggleTranslatePrompt: (bounds: { x: number, y: number }) =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAB_TRANSLATE_TOGGLE, bounds),
+    closeTranslatePrompt: () =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAB_TRANSLATE_CLOSE),
   },
 
   // ─── Navigasyon ───

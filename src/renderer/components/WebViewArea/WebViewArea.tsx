@@ -46,6 +46,43 @@ export default function WebViewArea() {
   const [newSiteUrl, setNewSiteUrl] = useState('');
   const [greeting, setGreeting] = useState('');
 
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, inputId?: string, targetIndex?: number, type: 'input' | 'favorite' } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, inputId: 'name' | 'url') => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, inputId, type: 'input' });
+  };
+
+  const handleFavoriteContextMenu = (e: React.MouseEvent, targetIndex: number) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, targetIndex, type: 'favorite' });
+  };
+
+  const handleCopy = () => {
+    if (contextMenu?.inputId === 'name') {
+      navigator.clipboard.writeText(newSiteName);
+    } else if (contextMenu?.inputId === 'url') {
+      navigator.clipboard.writeText(newSiteUrl);
+    }
+    setContextMenu(null);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        if (contextMenu?.inputId === 'name') {
+          setNewSiteName((prev) => prev + text);
+        } else if (contextMenu?.inputId === 'url') {
+          setNewSiteUrl((prev) => prev + text);
+        }
+      }
+    } catch (err) {
+      console.warn('Clipboard read failed:', err);
+    }
+    setContextMenu(null);
+  };
+
   const workspaceId = activeWorkspaceId || 'default';
   const storageKey = `morrow_shortcuts_${workspaceId}`;
 
@@ -226,6 +263,7 @@ export default function WebViewArea() {
                   {shortcuts.slice(0, 8).map((site: any, index: number) => (
                     <motion.div key={index} whileHover={{ scale: 1.08, y: -3 }} whileTap={{ scale: 0.95 }}
                       onClick={() => window.electronAPI?.nav.go(site.url)}
+                      onContextMenu={(e) => handleFavoriteContextMenu(e, index)}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer', position: 'relative', padding: '6px 2px' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: site.color ? `${site.color}20` : 'rgba(255,255,255,0.06)', border: `1px solid ${site.color ? `${site.color}40` : 'rgba(255,255,255,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {getFaviconUrl(site.url) ? (
@@ -285,20 +323,22 @@ export default function WebViewArea() {
         {isModalOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
-            onClick={() => setIsModalOpen(false)}>
+            onClick={() => { setIsModalOpen(false); setContextMenu(null); }}>
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setContextMenu(null); }}
               style={{ background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', padding: '28px', borderRadius: '16px', width: '340px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
               <h3 style={{ fontSize: '16px', color: '#e0e0ff', fontWeight: 600, margin: 0 }}>✨ Kısayol Ekle</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Site Adı</label>
                 <input value={newSiteName} onChange={(e) => setNewSiteName(e.target.value)} type="text" placeholder="Örn: YouTube"
+                  onContextMenu={(e) => handleContextMenu(e, 'name')}
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '10px 14px', borderRadius: '10px', color: 'white', outline: 'none', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}
                   onFocus={(e) => e.target.style.borderColor = 'rgba(139,92,246,0.5)'} onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>URL</label>
                 <input value={newSiteUrl} onChange={(e) => setNewSiteUrl(e.target.value)} type="text" placeholder="Örn: youtube.com"
+                  onContextMenu={(e) => handleContextMenu(e, 'url')}
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '10px 14px', borderRadius: '10px', color: 'white', outline: 'none', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}
                   onFocus={(e) => e.target.style.borderColor = 'rgba(139,92,246,0.5)'} onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
               </div>
@@ -308,6 +348,62 @@ export default function WebViewArea() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <>
+            <div 
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 199 }} 
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setContextMenu(null); }} 
+              onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              style={{
+                position: 'fixed',
+                top: contextMenu.y,
+                left: contextMenu.x,
+                background: 'rgba(20,20,30,0.95)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                padding: '6px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                zIndex: 200,
+                minWidth: '160px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {contextMenu.type === 'input' && (
+                <>
+                  <button onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', background: 'transparent', border: 'none', color: '#e0e0ff', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', fontSize: '13px', fontFamily: "'Inter', sans-serif" }} onMouseEnter={(e) => e.currentTarget.style.background='rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background='transparent'}>Kopyala</button>
+                  <button onClick={handlePaste} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', background: 'transparent', border: 'none', color: '#e0e0ff', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', fontSize: '13px', fontFamily: "'Inter', sans-serif" }} onMouseEnter={(e) => e.currentTarget.style.background='rgba(255,255,255,0.1)'} onMouseLeave={(e) => e.currentTarget.style.background='transparent'}>Yapıştır</button>
+                </>
+              )}
+              {contextMenu.type === 'favorite' && (
+                <button 
+                  onClick={(e) => {
+                    if (contextMenu.targetIndex !== undefined) {
+                      removeShortcut(contextMenu.targetIndex, e as any);
+                    }
+                    setContextMenu(null);
+                  }} 
+                  style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', borderRadius: '6px', textAlign: 'left', fontSize: '13px', fontFamily: "'Inter', sans-serif" }} 
+                  onMouseEnter={(e) => e.currentTarget.style.background='rgba(239,68,68,0.1)'} 
+                  onMouseLeave={(e) => e.currentTarget.style.background='transparent'}
+                >
+                  Kaldır (Sil)
+                </button>
+              )}
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
