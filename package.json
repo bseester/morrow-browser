@@ -1,10 +1,11 @@
 {
   "name": "morrow-browser",
-  "version": "1.4.7",
-  "version_id": 14,
+  "version": "1.4.8",
+  "version_id": 15,
   "description": "Morrow Browser - Chromium tabanlı modern masaüstü web tarayıcısı",
   "main": "dist/main/main.js",
   "author": "bseester",
+  "repository": "https://github.com/bseester/morrow-browser",
   "license": "MIT",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:electron\"",

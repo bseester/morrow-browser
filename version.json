@@ -1,5 +1,5 @@
 {
-  "latest_id": 14,
-  "version": "1.4.7",
-  "notes": "v1.4.7 - Premium SortableJS integration for fluid live tab reordering constraints, inline tab grouping, and new cosmic Morrow branding."
+  "latest_id": 15,
+  "version": "1.4.8",
+  "notes": "v1.4.8 - Fix CI: Add missing repository configuration for electron-builder GitHub Actions pipeline."
 }
