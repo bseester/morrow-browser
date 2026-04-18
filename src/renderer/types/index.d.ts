@@ -30,6 +30,9 @@ declare global {
       history: OriginalElectronAPI['history'] & {
         search: (query: string, limit?: number) => Promise<any[]>;
       };
+      extensions: OriginalElectronAPI['extensions'] & {
+        openListPopup: (anchorRect: { x: number; y: number; width: number; height: number }) => Promise<boolean>;
+      };
     };
   }
 }
@@ -37,6 +40,11 @@ declare global {
 export {};
 
 declare module "*.png" {
+  const value: string;
+  export default value;
+}
+
+declare module "*.jpg" {
   const value: string;
   export default value;
 }

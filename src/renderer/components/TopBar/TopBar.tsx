@@ -12,6 +12,7 @@ import Omnibox from './Omnibox';
 import ChromeMenu from './ChromeMenu';
 import DefaultBrowserBanner from './DefaultBrowserBanner';
 import logoImg from '../../assets/logo.jpg';
+import ExtensionsPopup from './ExtensionsPopup';
 
 import { useState, useEffect } from 'react';
 
@@ -148,6 +149,7 @@ export default function TopBar() {
       >
         <NavigationButtons />
         <Omnibox />
+        <ExtensionsPopup />
         <ChromeMenu />
       </div>
 

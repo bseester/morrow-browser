@@ -274,6 +274,10 @@ const electronAPI = {
     remove: (extensionId: string) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSION_REMOVE, extensionId),
     list: () => ipcRenderer.invoke(IPC_CHANNELS.EXTENSION_LIST),
     installCrx: (extensionId: string) => ipcRenderer.invoke(IPC_CHANNELS.EXTENSION_INSTALL_CRX, extensionId),
+    openPopup: (extensionId: string, anchorRect: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke(IPC_CHANNELS.EXTENSION_OPEN_POPUP, extensionId, anchorRect),
+    openListPopup: (anchorRect: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke('extension:open-list-popup', anchorRect),
   },
 
   // ─── Custom HTML ContextMenu ───

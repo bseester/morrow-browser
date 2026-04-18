@@ -18,37 +18,8 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.morrow.browser');
 }
 
-// ─── Donanım Optimizasyonları ───
-
-// GPU hızlandırma (WebGL, CSS animasyonları) ve Performans Bayrakları
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
-app.commandLine.appendSwitch('enable-smooth-scrolling');
-app.commandLine.appendSwitch('enable-oop-rasterization');
-app.commandLine.appendSwitch('disable-quic');
-
-// Ekstra GPU ve Video Optimizasyonları
-app.commandLine.appendSwitch('enable-accelerated-video-decode');
-app.commandLine.appendSwitch('enable-gpu-memory-buffer-video-frames');
-app.commandLine.appendSwitch('ignore-gpu-blocklist'); // Eski GPU'larda bile donanım hızlandırmayı zorlar
-app.commandLine.appendSwitch('enable-vulkan'); // Desteklenen donanımlarda Vulkan rendering
-
-// Global Medya Kontrolleri ve Donanım Video Kod Çözücü
-app.commandLine.appendSwitch('enable-features', 'HardwareMediaKeyHandling,VaapiVideoDecoder,CanvasOopRasterization');
-
-// Widevine CDM DRM (Netflix, Spotify vb. için)
-// Not: Gerçek dağıtımda Widevine dosyalarının proje ile paketlenmesi veya indirilmesi gerekir.
-const widevinePath = process.platform === 'win32' 
-  ? path.join(app.getAppPath(), '..', 'widevine', 'widevinecdm.dll')
-  : path.join(app.getAppPath(), '..', 'widevine', 'libwidevinecdm.dylib');
-app.commandLine.appendSwitch('widevine-cdm-path', widevinePath);
-app.commandLine.appendSwitch('widevine-cdm-version', '4.10.2710.0');
-
-// Bellek optimizasyonu
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
-
-// Güvenlik: uzak içeriğin tehlikeli API'lere erişimini engelle
-app.commandLine.appendSwitch('disable-remote-module');
+// Siyah ekran sorununu çözmek için donanım hızlandırmayı devre dışı bırak
+app.disableHardwareAcceleration();
 
 // ─── Singleton kilidi (tek pencere) ───
 
@@ -79,6 +50,10 @@ if (!gotLock) {
   app.whenReady().then(() => {
     adBlocker = new AdBlocker(session.defaultSession);
     
+    // Google Sign-In ve tarayıcı tespiti için Chrome UA tanımla (V3 Tutarlılık)
+    const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    session.defaultSession.setUserAgent(CHROME_UA);
+
     windowManager = new WindowManager();
     const mainWindow = windowManager.createMainWindow();
 
@@ -91,12 +66,6 @@ if (!gotLock) {
       win.once('ready-to-show', () => {
         import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
       });
-      // Pencere zaten gösterildiyse fallback
-      if (win.isVisible()) {
-        import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
-      }
-    } else {
-      import('./updater').then(({ setupAutoUpdater }) => setupAutoUpdater());
     }
 
     // ─── Chrome Web Store Spoofing (Global System User Agent) ───

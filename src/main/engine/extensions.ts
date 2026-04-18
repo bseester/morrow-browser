@@ -50,6 +50,44 @@ class ExtensionManager {
   }
 
   /**
+   * Chrome i18n mesaj anahtarını (_locales) çözümler
+   * Örn: "__MSG_app_name__" -> "Volume Master"
+   */
+  private resolveI18nMessage(extensionPath: string, msgKey: string): string {
+    if (!msgKey || !msgKey.startsWith('__MSG_')) return msgKey;
+    
+    const key = msgKey.replace(/__MSG_(.+)__/, '$1');
+    const localePriority = ['en', 'en_US', 'tr', 'default'];
+    
+    for (const locale of localePriority) {
+      const msgPath = path.join(extensionPath, '_locales', locale, 'messages.json');
+      if (fs.existsSync(msgPath)) {
+        try {
+          const messages = JSON.parse(fs.readFileSync(msgPath, 'utf8'));
+          if (messages[key]?.message) return messages[key].message;
+        } catch {}
+      }
+    }
+    
+    // Fallback: _locales klasöründeki herhangi bir dile bak
+    const localesDir = path.join(extensionPath, '_locales');
+    if (fs.existsSync(localesDir)) {
+      const dirs = fs.readdirSync(localesDir);
+      for (const dir of dirs) {
+        const msgPath = path.join(localesDir, dir, 'messages.json');
+        if (fs.existsSync(msgPath)) {
+          try {
+            const messages = JSON.parse(fs.readFileSync(msgPath, 'utf8'));
+            if (messages[key]?.message) return messages[key].message;
+          } catch {}
+        }
+      }
+    }
+    
+    return msgKey; // Çözümlenemezse orijinali döndür
+  }
+
+  /**
    * Belirtilen yoldan eklenti yükler
    */
   async loadExtensionFromPath(extensionPath: string): Promise<LoadedExtension | null> {
@@ -70,7 +108,7 @@ class ExtensionManager {
 
       const loaded: LoadedExtension = {
         id: ext.id,
-        name: manifest.name || ext.name || 'Bilinmeyen Eklenti',
+        name: this.resolveI18nMessage(extensionPath, manifest.name) || ext.name || 'Bilinmeyen Eklenti',
         version: manifest.version || '0.0.0',
         path: extensionPath,
       };
@@ -127,9 +165,14 @@ class ExtensionManager {
       }
 
       if (fs.existsSync(targetDir)) {
-        console.log('[ExtensionManager] Zaten kurulu:', extensionId);
-        this.loadExtensionFromPath(targetDir).then(resolve);
-        return;
+        if (fs.existsSync(path.join(targetDir, 'manifest.json'))) {
+          console.log('[ExtensionManager] Zaten kurulu:', extensionId);
+          this.loadExtensionFromPath(targetDir).then(resolve);
+          return;
+        } else {
+          console.log('[ExtensionManager] Bozuk/eksik kurulum tespit edildi, yeniden indiriliyor:', extensionId);
+          fs.rmSync(targetDir, { recursive: true, force: true });
+        }
       }
       
       fs.mkdirSync(targetDir, { recursive: true });
@@ -161,10 +204,28 @@ class ExtensionManager {
 
   private extractCrx(response: import('http').IncomingMessage, targetDir: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      // unzipper ZIP signatürünü otomatik bulup öndeki CRX header'ını atlayabilir
-      response.pipe(unzipper.Extract({ path: targetDir }))
-        .on('close', () => resolve())
-        .on('error', (err) => reject(err));
+      const chunks: Buffer[] = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('end', async () => {
+        let buf = Buffer.concat(chunks);
+        
+        // Find the classic ZIP header 'PK\x03\x04' and discard the custom CRX header
+        const zipMagic = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+        const zipOffset = buf.indexOf(zipMagic);
+        
+        if (zipOffset !== -1) {
+          buf = buf.slice(zipOffset);
+        }
+        
+        try {
+          const directory = await unzipper.Open.buffer(buf);
+          await directory.extract({ path: targetDir });
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+      response.on('error', (err) => reject(err));
     });
   }
 

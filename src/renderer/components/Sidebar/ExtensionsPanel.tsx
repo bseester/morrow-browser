@@ -15,6 +15,9 @@ interface ExtensionInfo {
 export default function ExtensionsPanel() {
   const [extensions, setExtensions] = useState<ExtensionInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [crxInput, setCrxInput] = useState('');
+  const [installingCrx, setInstallingCrx] = useState(false);
+  const [crxError, setCrxError] = useState('');
 
   const loadExtensions = async () => {
     const list = await window.electronAPI?.extensions?.list();
@@ -41,6 +44,35 @@ export default function ExtensionsPanel() {
   const handleRemove = async (id: string) => {
     await window.electronAPI?.extensions?.remove(id);
     await loadExtensions();
+  };
+
+  const handleInstallCrx = async () => {
+    if (!crxInput.trim()) return;
+    
+    setInstallingCrx(true);
+    setCrxError('');
+    
+    try {
+      // Regex accepts full URLs or exact 32-char IDs
+      const match = crxInput.match(/(?:detail\/[^\/]+\/|)([a-z]{32})/);
+      if (!match || !match[1]) {
+        throw new Error("Geçerli bir Eklenti ID'si veya Chrome Web Mağazası linki bulunamadı.");
+      }
+      
+      const extensionId = match[1];
+      const result = await window.electronAPI?.extensions?.installCrx(extensionId);
+      
+      if (result) {
+        setCrxInput('');
+        await loadExtensions();
+      } else {
+        setCrxError("İndirme veya yükleme başarısız oldu. Bağlantıyı kontrol edin.");
+      }
+    } catch (err: any) {
+      setCrxError(err.message || 'Bilinmeyen bir hata oluştu');
+    } finally {
+      setInstallingCrx(false);
+    }
   };
 
   return (
@@ -71,6 +103,64 @@ export default function ExtensionsPanel() {
         <span style={{ fontSize: '18px' }}>{loading ? '⏳' : '📂'}</span>
         {loading ? 'Yükleniyor...' : 'Klasörden Eklenti Yükle (Unpacked)'}
       </motion.button>
+
+      {/* Chrome Mağaza Linkinden Ekleme Alanı */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        padding: '12px',
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-md)',
+      }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="text"
+            value={crxInput}
+            onChange={(e) => setCrxInput(e.target.value)}
+            placeholder="Chrome Eklenti Linki (örn: https://chromeweb...)"
+            disabled={installingCrx}
+            style={{
+              flex: 1,
+              background: 'rgba(0,0,0,0.2)',
+              border: '1px solid var(--border-muted)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              fontFamily: 'Inter, sans-serif',
+              outline: 'none',
+              minWidth: 0
+            }}
+          />
+          <motion.button
+            onClick={handleInstallCrx}
+            disabled={installingCrx || !crxInput.trim()}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              padding: '0 16px',
+              background: installingCrx ? 'var(--bg-elevated)' : 'var(--accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: installingCrx || !crxInput.trim() ? 'not-allowed' : 'pointer',
+              opacity: installingCrx || !crxInput.trim() ? 0.6 : 1,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {installingCrx ? 'İniyor...' : '🔥 Kur'}
+          </motion.button>
+        </div>
+        {crxError && (
+          <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '4px' }}>
+            {crxError}
+          </div>
+        )}
+      </div>
 
       {/* Yüklü Eklentiler */}
       {extensions.length === 0 ? (
@@ -156,8 +246,7 @@ export default function ExtensionsPanel() {
         }}
       >
         <p style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: '1.5' }}>
-          💡 <strong>İpucu:</strong> Chrome Web Mağazası'ndan bir eklenti indirin,
-          ZIP'i çıkartın ve yukarıdaki butona tıklayarak manifest.json içeren klasörü seçin.
+          💡 <strong>İpucu:</strong> Geliştiriciler için "Klasörden Yükle" butonunu kullanabilir veya Chrome Mağazası'ndan girdiğiniz bir eklentinin linkini yukarıya yapıştırıp tek tıkla kurabilirsiniz!
         </p>
       </div>
     </div>

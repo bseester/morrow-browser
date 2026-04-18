@@ -1194,6 +1194,286 @@ export function registerIPCHandlers(windowManager: WindowManager, adBlocker: AdB
     return extensionManager.installCrx(extensionId);
   });
 
+  // ─── Extension List Popup (BrowserWindow olarak, webview’un üzerinde) ───
+  let extListWindow: import('electron').BrowserWindow | null = null;
+  let lastAnchorRect: { x: number; y: number; width: number; height: number } = { x: 0, y: 0, width: 30, height: 30 };
+
+  ipcMain.handle('extension:open-list-popup', async (_event, anchorRect: { x: number; y: number; width: number; height: number }) => {
+    const { BrowserWindow: BW, screen: scr } = require('electron');
+    lastAnchorRect = anchorRect; // extension popup için sakla
+    
+    if (extListWindow && !extListWindow.isDestroyed()) {
+      extListWindow.close();
+      extListWindow = null;
+      return;
+    }
+
+    const extensions = extensionManager.getLoadedExtensions();
+    const mainWin = BW.getAllWindows().find((w: any) => !w.__extensionPopup && !w.__extList);
+    const winBounds = mainWin?.getBounds() || { x: 0, y: 0 };
+
+    const popupWidth = 310;
+    const popupX = Math.round(winBounds.x + anchorRect.x + anchorRect.width - popupWidth);
+    const popupY = Math.round(winBounds.y + anchorRect.y + anchorRect.height + 6);
+
+    // Extension ikonu dosyalarını bul
+    const extData = extensions.map((ext: any) => {
+      const fs = require('fs');
+      const path = require('path');
+      let iconPath = '';
+      try {
+        const manifest = JSON.parse(fs.readFileSync(path.join(ext.path, 'manifest.json'), 'utf8'));
+        const iconRelPath = manifest?.icons?.['48'] || manifest?.icons?.['32'] || manifest?.icons?.['16'] ||
+          manifest?.action?.default_icon?.['48'] || manifest?.action?.default_icon?.['19'] || '';
+        if (iconRelPath) {
+          const full = path.join(ext.path, iconRelPath);
+          if (fs.existsSync(full)) iconPath = `file://${full}`;
+        }
+      } catch {}
+      return { id: ext.id, name: ext.name, version: ext.version, iconPath };
+    });
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Inter', sans-serif; background: #1c1b2e; color: #fff; border-radius: 14px; overflow: hidden; border: 1px solid rgba(139,92,246,0.25); }
+.header { padding: 13px 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.07); display:flex; justify-content:space-between; align-items:center; }
+.header h3 { font-size: 13px; font-weight: 700; color:#fff; }
+.close-btn { background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:15px; width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; }
+.close-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+.subtitle { padding: 10px 16px 4px; font-size:11px; font-weight:600; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.5px; }
+.ext-list { overflow-y: auto; }
+.ext-item { display:flex; align-items:center; gap:12px; padding:8px 16px; cursor:pointer; transition:background 0.1s; }
+.ext-item:hover { background:rgba(255,255,255,0.05); }
+.ext-icon { width:32px; height:32px; border-radius:8px; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.25); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; overflow:hidden; }
+.ext-icon img { width:100%; height:100%; object-fit:contain; }
+.ext-info { flex:1; min-width:0; }
+.ext-name { font-size:13px; font-weight:500; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ext-ver { font-size:10px; color:rgba(255,255,255,0.35); }
+.actions { display:flex; gap:2px; flex-shrink:0; }
+.action-btn { width:26px; height:26px; background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+.action-btn:hover { background:rgba(248,113,113,0.12); color:#f87171; }
+.footer { border-top: 1px solid rgba(255,255,255,0.07); padding:4px; }
+.manage-btn { width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; background:none; border:none; border-radius:10px; color:rgba(255,255,255,0.6); cursor:pointer; font-size:13px; font-weight:500; }
+.manage-btn:hover { background:rgba(255,255,255,0.05); color:#fff; }
+.empty { padding:28px 16px; text-align:center; color:rgba(255,255,255,0.3); font-size:12px; }
+</style>
+</head>
+<body>
+<div class="header"><h3>Uzantılar</h3><button class="close-btn" onclick="window.close()">&#x2715;</button></div>
+${extData.length > 0 ? '<div class="subtitle">Yüklü Uzantılar</div>' : ''}
+<div class="ext-list">
+${extData.length === 0 ? '<div class="empty">Henüz yüklü uzantı yok.</div>' : extData.map((e: any) => `
+<div class="ext-item" onclick="openPopup('${e.id}')">
+  <div class="ext-icon">${e.iconPath ? `<img src="${e.iconPath}" onerror="this.style.display='none';this.parentElement.textContent='🧩'">` : '🧩'}</div>
+  <div class="ext-info"><div class="ext-name">${e.name}</div><div class="ext-ver">v${e.version}</div></div>
+  <div class="actions"><button class="action-btn" onclick="event.stopPropagation();removeExt('${e.id}')" title="Kaldır">&#x2715;</button></div>
+</div>`).join('')}
+</div>
+<div class="footer"><button class="manage-btn" onclick="openSettings()">⚙️ Uzantıları yönet</button></div>
+<script>
+  const { ipcRenderer } = require('electron');
+  function openPopup(id) { ipcRenderer.invoke('extension:open-popup-from-list', id); window.close(); }
+  function removeExt(id) { ipcRenderer.invoke('extension:remove', id); window.close(); }
+  function openSettings() { ipcRenderer.invoke('system:navigate-main-router', '/settings?category=extensions'); window.close(); }
+<\/script>
+</body></html>`;
+
+    const tmpFile = require('path').join(require('os').tmpdir(), 'morrow-ext-list.html');
+    require('fs').writeFileSync(tmpFile, html);
+
+    extListWindow = new BW({
+      width: popupWidth,
+      height: Math.min(80 + extData.length * 50 + 50, 480),
+      x: popupX,
+      y: popupY,
+      frame: false,
+      alwaysOnTop: true,
+      transparent: false,
+      resizable: false,
+      skipTaskbar: true,
+      show: false,
+      roundedCorners: true,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    });
+    const w = extListWindow!;
+    (w as any).__extList = true;
+    w.loadFile(tmpFile);
+    w.once('ready-to-show', () => w.show());
+    w.on('blur', () => { w.close(); extListWindow = null; });
+    w.on('closed', () => { extListWindow = null; });
+    return true;
+  });
+
+  // Extension'a popup listesinden tıklanınca aç
+  ipcMain.handle('extension:open-popup-from-list', async (_event, extensionId: string) => {
+    const { BrowserWindow: BW } = require('electron');
+    const path = require('path');
+    const fs = require('fs');
+
+    const ext = extensionManager.getLoadedExtensions().find((e: any) => e.id === extensionId);
+    if (!ext) return false;
+    const manifest = JSON.parse(fs.readFileSync(path.join(ext.path, 'manifest.json'), 'utf8'));
+    const popupRelPath = manifest?.action?.default_popup || manifest?.browser_action?.default_popup;
+    if (!popupRelPath) return false;
+    const popupFile = path.join(ext.path, popupRelPath);
+    if (!fs.existsSync(popupFile)) return false;
+
+    const existing = BW.getAllWindows().find((w: any) => w.__extensionPopup);
+    if (existing) existing.close();
+
+    const mainWin = BW.getAllWindows().find((w: any) => !w.__extensionPopup && !w.__extList);
+    const winBounds = mainWin?.getBounds() || { x: 0, y: 0 };
+    // Listeyle aynı pozisyona hizala (puzzle butonu altı)
+    const popupWidth = 380;
+    const popupX = Math.round(winBounds.x + lastAnchorRect.x + lastAnchorRect.width - popupWidth);
+    const popupY = Math.round(winBounds.y + lastAnchorRect.y + lastAnchorRect.height + 6);
+
+    const popupWin = new BW({
+      width: popupWidth, height: 520,
+      x: popupX, y: popupY,
+      frame: false, transparent: false,
+      alwaysOnTop: true, resizable: false,
+      skipTaskbar: true, show: false,
+      webPreferences: { 
+        session: require('electron').session.defaultSession, 
+        nodeIntegration: true, // Bridge için gerekli
+        contextIsolation: false 
+      },
+    });
+    (popupWin as any).__extensionPopup = true;
+    popupWin.loadFile(popupFile);
+    
+    // Volume Booster Bridge: Eklenti slider'ını yakala ve Morrow'un native ses sistemine bağla
+    popupWin.webContents.on('did-finish-load', () => {
+      popupWin.webContents.executeJavaScript(`
+        (function() {
+          console.log("[ExtensionBridge] Volume Booster bridge initialized.");
+          
+          function setupHooks() {
+            // Sadece type="range" değil, sesle ilgili her türlü slider'ı bulmaya çalış
+            const sliders = document.querySelectorAll('input[type="range"], .slider, [role="slider"]');
+            
+            sliders.forEach(slider => {
+              if (slider.__morrow_hooked) return;
+              slider.__morrow_hooked = true;
+              
+              const onValueChange = () => {
+                let val;
+                if (slider.tagName === 'INPUT') {
+                  val = parseFloat(slider.value);
+                } else {
+                  // Custom slider'lar için ARIA attribute'larına bak
+                  val = parseFloat(slider.getAttribute('aria-valuenow'));
+                }
+
+                if (!isNaN(val)) {
+                  // Volume Master 0-600 arası değer verir, biz 0.0 - 6.0 yapıyoruz
+                  // Eğer başka bir eklentiyse ve 0-100 arasıysa onu da kurtaralım
+                  const gain = val > 6 ? val / 100 : val / 100; 
+                  console.log("[ExtensionBridge] Volume change detected:", val, "-> Gain:", gain);
+                  require('electron').ipcRenderer.invoke('extension:set-volume', gain);
+                }
+              };
+
+              slider.addEventListener('input', onValueChange);
+              slider.addEventListener('change', onValueChange);
+              
+              // Bazı React eklentileri için MutationObserver ile değer değişimini izle
+              const valObserver = new MutationObserver(onValueChange);
+              valObserver.observe(slider, { attributes: true, attributeFilter: ['value', 'aria-valuenow'] });
+            });
+          }
+
+          setInterval(setupHooks, 1000);
+          setupHooks();
+        })();
+      `);
+    });
+
+    popupWin.once('ready-to-show', () => popupWin.show());
+    popupWin.on('blur', () => popupWin.close());
+    return true;
+  });
+
+  // Native Ses Kontrolü IPC
+  ipcMain.handle('extension:set-volume', async (_event, gain: number) => {
+    if (!windowManager) return false;
+    const result = await windowManager.getTabManager()?.setVolume(gain);
+    return result;
+  });
+
+  // navigate-main-router handler (list popup'tan)
+  ipcMain.handle('system:navigate-main-router', (_event, route: string) => {
+    const { BrowserWindow: BW } = require('electron');
+    const mainWin = BW.getAllWindows().find((w: any) => !w.__extensionPopup && !w.__extList);
+    mainWin?.webContents.send('system:on-navigate-router', route);
+  });
+
+
+  // Eklenti popup penceresini aç (Chrome'daki gibi)
+  ipcMain.handle(IPC_CHANNELS.EXTENSION_OPEN_POPUP, async (_event, extensionId: string, anchorRect: { x: number; y: number; width: number; height: number }) => {
+    const { BrowserWindow } = require('electron');
+    const path = require('path');
+    const fs = require('fs');
+    
+    const ext = extensionManager.getLoadedExtensions().find(e => e.id === extensionId);
+    if (!ext) return false;
+    
+    const manifestPath = path.join(ext.path, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    
+    const popupRelPath = manifest?.action?.default_popup || manifest?.browser_action?.default_popup;
+    if (!popupRelPath) return false;
+    
+    const popupFile = path.join(ext.path, popupRelPath);
+    if (!fs.existsSync(popupFile)) return false;
+    
+    // Mevcut popup penceresini kapat
+    const existing = BrowserWindow.getAllWindows().find((w: any) => w.__extensionPopup);
+    if (existing) existing.close();
+    
+    const mainWin = BrowserWindow.getAllWindows().find((w: any) => !w.__extensionPopup);
+    const winBounds = mainWin?.getBounds() || { x: 0, y: 0 };
+    
+    const popupWidth = 380;
+    const popupHeight = 500;
+    // Sağ kenarını butonun sağ kenarına hizala, butonun hemen altında aç
+    const popupX = Math.round(winBounds.x + anchorRect.x + anchorRect.width - popupWidth);
+    const popupY = Math.round(winBounds.y + anchorRect.y + anchorRect.height + 6);
+    
+    const popupWin = new BrowserWindow({
+      width: popupWidth,
+      height: popupHeight,
+      x: popupX,
+      y: popupY,
+      frame: false,
+      transparent: false,
+      alwaysOnTop: true,
+      resizable: false,
+      skipTaskbar: true,
+      show: false,
+      webPreferences: {
+        session: require('electron').session.defaultSession,
+        nodeIntegration: false,
+        contextIsolation: false,
+      },
+    });
+    
+    (popupWin as any).__extensionPopup = true;
+    
+    popupWin.loadFile(popupFile);
+    popupWin.once('ready-to-show', () => popupWin.show());
+    popupWin.on('blur', () => popupWin.close());
+    
+    return true;
+  });
 
 
   // ─── Custom HTML ContextMenu Click Forwards ───

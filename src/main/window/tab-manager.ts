@@ -163,6 +163,10 @@ export class TabManager {
     // Navigasyon olaylarını dinle
     this.attachWebContentsListeners(tabId, view.webContents);
 
+    // Chrome UA zorla
+    const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    view.webContents.setUserAgent(CHROME_UA);
+
     // Pencereye ekle (henüz görünmez)
     this.mainWindow.contentView.addChildView(view);
 
@@ -642,6 +646,65 @@ export class TabManager {
 
   getActiveTabId(): number | null {
     return this.activeTabId;
+  }
+
+  /**
+   * Aktif sekmenin ses seviyesini Web Audio GainNode injection ile ayarlar.
+   * gain: 0.0 = sessiz, 1.0 = normal, 6.0 = 600%
+   */
+  async setVolume(gain: number): Promise<boolean> {
+    const wc = this.getActiveWebContents();
+    if (!wc || wc.isDestroyed()) return false;
+    console.log(`[AudioEngine] Setting volume to: ${Math.round(gain * 100)}% for tab: ${this.activeTabId}`);
+    try {
+      await wc.executeJavaScript(`
+        (function(gain) {
+          try {
+            if (window.__morrow_audio_ctx && !window.__morrow_audio_ctx.closed) {
+              window.__morrow_gain_node.gain.setTargetAtTime(gain, window.__morrow_audio_ctx.currentTime, 0.01);
+              return;
+            }
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = gain;
+            gainNode.connect(ctx.destination);
+            window.__morrow_audio_ctx = ctx;
+            window.__morrow_gain_node = gainNode;
+
+            function hookEl(el) {
+              if (el.__morrow_hooked) return;
+              try {
+                // CORS hatasını önlemek için crossOrigin denemesi
+                if (el.src && !el.src.startsWith('blob:') && !el.src.startsWith('data:')) {
+                   el.crossOrigin = "anonymous";
+                }
+                const src = ctx.createMediaElementSource(el);
+                src.connect(gainNode);
+                el.__morrow_hooked = true;
+                console.log("[AudioEngine] Successfully hooked element:", el.tagName);
+              } catch(e) {
+                console.warn("[AudioEngine] Hooking failed (likely CORS):", e.message);
+                // Fallback: Boost çalışmasa da max volume yap
+                el.volume = 1.0; 
+              }
+            }
+            document.querySelectorAll('audio,video').forEach(hookEl);
+            const observer = new MutationObserver(() => {
+              document.querySelectorAll('audio,video').forEach(hookEl);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+          } catch(err) {
+            console.error("[AudioEngine] Injection error:", err);
+          }
+        })(${gain});
+      `);
+      return true;
+    } catch(e) {
+      console.error("[AudioEngine] Main process error:", e);
+      return false;
+    }
   }
 
   togglePinTab(tabId: number): void {

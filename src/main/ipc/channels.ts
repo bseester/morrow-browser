@@ -70,6 +70,8 @@ export const IPC_CHANNELS = {
   EXTENSION_REMOVE: 'extension:remove',
   EXTENSION_LIST: 'extension:list',
   EXTENSION_INSTALL_CRX: 'extension:install-crx',
+  EXTENSION_OPEN_POPUP: 'extension:open-popup',
+  EXTENSION_LIST_POPUP_CLOSE: 'extension:list-popup-close',
 
   // ─── Genel & Sistem ───
   APP_INFO: 'app:info',

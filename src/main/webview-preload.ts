@@ -1,6 +1,94 @@
 /// <reference lib="dom" />
 import { contextBridge, ipcRenderer } from 'electron';
 
+// --- Google / Chromium Deep Spoofing (V3) ---
+
+// 1. window.chrome Polyfill (Gelişmiş)
+if (!(window as any).chrome) {
+  (window as any).chrome = {
+    runtime: {
+      sendMessage: () => {},
+      getURL: (path: string) => `chrome-extension://preview/${path}`,
+      connect: () => ({ onMessage: { addListener: () => {} }, onDisconnect: { addListener: () => {} }, postMessage: () => {}, disconnect: () => {} }),
+      onMessage: { addListener: () => {}, removeListener: () => {} },
+      onConnect: { addListener: () => {} }
+    },
+    loadTimes: () => ({
+      requestTime: Date.now() / 1000 - 0.5,
+      startLoadTime: Date.now() / 1000 - 0.5,
+      commitLoadTime: Date.now() / 1000 - 0.4,
+      finishDocumentLoadTime: Date.now() / 1000 - 0.3,
+      finishLoadTime: Date.now() / 1000 - 0.2,
+      firstPaintTime: Date.now() / 1000 - 0.35,
+      firstPaintAfterLoadTime: 0,
+      navigationType: 'Other',
+      wasFetchedViaSpdy: true,
+      wasNpnNegotiated: true,
+      wasAlternateProtocolAvailable: false,
+      connectionInfo: 'h2'
+    }),
+    csi: () => ({
+      startE: Date.now(),
+      onloadT: Date.now() + 200,
+      pageT: 500,
+      tran: 15
+    }),
+    app: {
+      isInstalled: false,
+      getIsInstalled: () => false,
+      getDetails: () => null,
+      installState: () => 'not_installed'
+    }
+  };
+}
+
+// 2. Navigator Fingerprint Maskeleme
+const maskNavigator = () => {
+  // Webdriver'ı tamamen gizle (Google bot tespiti için ilk buraya bakar)
+  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+  // Dilleri sabitle
+  Object.defineProperty(navigator, 'languages', { get: () => ['tr-TR', 'tr', 'en-US', 'en'] });
+
+  // Plugins Simülasyonu (Electron'da boştur, gerçek Chrome'da PDF eklentileri vardır)
+  const mockPlugins = [
+    { name: 'Chrome PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+    { name: 'Chromium PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+    { name: 'Microsoft Edge PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+    { name: 'PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+    { name: 'WebKit built-in PDF', filename: 'internal-pdf-viewer', description: 'Portable Document Format' }
+  ];
+
+  Object.defineProperty(navigator, 'plugins', {
+    get: () => {
+      const items = [...mockPlugins];
+      (items as any).refresh = () => {};
+      (items as any).item = (i: number) => items[i];
+      (items as any).namedItem = (name: string) => items.find((p: any) => p.name === name);
+      return items;
+    }
+  });
+
+  // Client Hints (Modern Chrome doğrulaması için kritik)
+  if (!(navigator as any).userAgentData) {
+    (navigator as any).userAgentData = {
+      brands: [
+        { brand: 'Not-A.Brand', version: '99' },
+        { brand: 'Chromium', version: '124' },
+        { brand: 'Google Chrome', version: '124' }
+      ],
+      mobile: false,
+      platform: 'Windows'
+    };
+  }
+};
+
+try {
+  maskNavigator();
+} catch (e) {
+  // Maskeleme sessizce başarısız olabilir (güvenlik policaları vb.)
+}
+
 // 1. Dış dünyaya sınırlı bir API sun
 contextBridge.exposeInMainWorld('morrowInternals', {
   savePassword: (origin: string, user: string, pass: string) => ipcRenderer.send('password:save', origin, user, pass),
