@@ -29,6 +29,14 @@ if (process.platform !== 'darwin') {
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
 app.commandLine.appendSwitch('disable-features', 'FedCm');
 
+// ─── Global UA Override — app.whenReady'den ÖNCE set edilmeli ───
+// Castlabs Electron build'de kendi "morrow-browser/x.x Electron/x.x" UA'sını
+// inject ediyor. app.userAgentFallback bunu en düşük seviyede ezer.
+const CHROME_UA = process.platform === 'darwin'
+  ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+app.userAgentFallback = CHROME_UA;
+
 // ─── Singleton kilidi (tek pencere) ───
 
 const gotLock = app.requestSingleInstanceLock();
@@ -93,26 +101,46 @@ if (!gotLock) {
     const persistentSession = session.fromPartition('persist:bseester');
 
     // ─── Google Sign-In Firefox UA Fix ───
-    // Google, accounts.google.com'da Chromium/Electron tabanlı istekleri
-    // "güvenli olmayan uygulama" olarak işaretler. Firefox UA gönderince bu
-    // kontrol devreye girmiyor. Diğer sitelerde Chrome UA korunur.
-    const CHROME_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-    const FIREFOX_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0';
+    const FIREFOX_UA = process.platform === 'darwin'
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0'
+      : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0';
 
     const GOOGLE_AUTH_DOMAINS = [
       'accounts.google.com',
       'myaccount.google.com',
+      'play.google.com',
+      'google.com',
     ];
 
     const applyFirefoxUAFix = (sess: Electron.Session) => {
-      sess.setUserAgent(CHROME_UA);
       sess.webRequest.onBeforeSendHeaders((details, callback) => {
         const headers = details.requestHeaders;
         const isGoogleAuth = GOOGLE_AUTH_DOMAINS.some(d => details.url.includes(d));
-        headers['User-Agent'] = isGoogleAuth ? FIREFOX_UA : CHROME_UA;
+
+        if (isGoogleAuth) {
+          // Firefox UA gönder — Google bu durumda embedded webview kontrolü yapmıyor
+          headers['User-Agent'] = FIREFOX_UA;
+          // Firefox'ta Client Hints olmaz — kaldır
+          delete headers['Sec-Ch-Ua'];
+          delete headers['Sec-Ch-Ua-Mobile'];
+          delete headers['Sec-Ch-Ua-Platform'];
+          delete headers['Sec-Ch-Ua-Full-Version-List'];
+        } else {
+          headers['User-Agent'] = CHROME_UA;
+          // Tüm domainler için Sec-Ch-Ua'yı Chrome/124 ile ez
+          // Castlabs Chromium/146 inject ediyor — bu play.google.com gibi
+          // Google servislerinin tespitini tetikliyor
+          headers['Sec-Ch-Ua'] = '"Not-A.Brand";v="99", "Google Chrome";v="124", "Chromium";v="124"';
+          headers['Sec-Ch-Ua-Mobile'] = '?0';
+          headers['Sec-Ch-Ua-Platform'] = '"macOS"';
+        }
+
         callback({ requestHeaders: headers });
       });
     };
+
+    // Google auth domain listesini genişlet — play.google.com da dahil
+    // Bu domainlerden gelen log istekleri Sec-Ch-Ua ile Electron tespitini tetikliyordu
 
     applyFirefoxUAFix(session.defaultSession);
     applyFirefoxUAFix(persistentSession);

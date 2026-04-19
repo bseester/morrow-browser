@@ -26,6 +26,14 @@ mac:
         - universal
   icon: resources/icons/icon-mac.png
   category: public.app-category.productivity
+  # Dev modla aynı davranış — hardenedRuntime kapalı
+  # hardenedRuntime açık olunca macOS ek network kısıtlamaları uyguluyor
+  # bu da Google'ın embedded webview tespitini tetikliyor
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  extendInfo:
+    NSAppTransportSecurity:
+      NSAllowsArbitraryLoads: true
 
 dmg:
   artifactName: ${productName}-${version}.${ext}

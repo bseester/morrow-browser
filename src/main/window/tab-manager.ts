@@ -173,24 +173,12 @@ export class TabManager {
       });
     }
 
-    // Chrome UA zorla
-    // UA platform'a göre ayarla — main.ts'deki onBeforeSendHeaders ile tutarlı olmalı
+    // Chrome UA zorla — platform'a göre Mac veya Windows formatı
+    // app.userAgentFallback ile tutarlı olmalı (main.ts)
     const CHROME_UA = process.platform === 'darwin'
       ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
       : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-    const FIREFOX_UA = process.platform === 'darwin'
-      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0'
-      : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0';
-
-    // Sekme bazlı UA — başlangıçta Chrome
     view.webContents.setUserAgent(CHROME_UA);
-
-    // Google auth sayfalarında otomatik Firefox UA'ya geç
-    const GOOGLE_AUTH_DOMAINS = ['accounts.google.com', 'myaccount.google.com'];
-    view.webContents.on('did-start-navigation', (_, url) => {
-      const isGoogleAuth = GOOGLE_AUTH_DOMAINS.some(d => url.includes(d));
-      view.webContents.setUserAgent(isGoogleAuth ? FIREFOX_UA : CHROME_UA);
-    });
 
     // Pencereye ekle (henüz görünmez)
     this.mainWindow.contentView.addChildView(view);
