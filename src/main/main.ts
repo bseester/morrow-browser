@@ -10,6 +10,8 @@ import path from 'path';
 import { WindowManager } from './window/WindowManager';
 import { registerIPCHandlers } from './ipc/handlers';
 import { AdBlocker } from './engine/adblocker';
+import { setupCrxProtocol, getExtensionManager } from './engine/extensions';
+import { installChromeWebStore } from 'electron-chrome-web-store';
 
 export let adBlocker: AdBlocker | null = null;
 let windowManager: WindowManager;
@@ -53,9 +55,25 @@ if (!gotLock) {
 
   // ─── Uygulama Hazır ───
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    setupCrxProtocol();
+
     adBlocker = new AdBlocker(session.defaultSession);
     
+    // Extension manager kur ve global'e at
+    const extManager = getExtensionManager();
+    (global as any).extensionManager = extManager;
+
+    // Chrome Web Store kurulumunu bağla — Otomatik indirme ve kurulum
+    await installChromeWebStore({
+      session: session.fromPartition('persist:bseester'),
+      extensionsPath: path.join(app.getPath('userData'), 'extensions', 'crx'),
+      loadExtensions: true,
+    });
+
+    // Eski eklentileri geri yükle
+    await extManager.restoreExtensions();
+
 
     windowManager = new WindowManager();
     const mainWindow = windowManager.createMainWindow();

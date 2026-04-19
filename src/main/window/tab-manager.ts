@@ -163,6 +163,16 @@ export class TabManager {
     // Navigasyon olaylarını dinle
     this.attachWebContentsListeners(tabId, view.webContents);
 
+    // Extension sistemine kaydet
+    const extManager = (global as any).extensionManager;
+    if (extManager) {
+      view.webContents.once('did-finish-load', () => {
+        if (!view.webContents.isDestroyed()) {
+          extManager.addTab(view.webContents, this.mainWindow);
+        }
+      });
+    }
+
     // Chrome UA zorla
     const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
     view.webContents.setUserAgent(CHROME_UA);
@@ -199,6 +209,10 @@ export class TabManager {
     } catch (e) {
       // Pencere kapanırken nesne yok edilmiş olabilir
     }
+
+    // Extension sisteminden sekmeyi düşür
+    const extManager = (global as any).extensionManager;
+    if (extManager) extManager.removeTab(view.webContents);
 
     // WebContents'i destroy et (bellek sızıntısını önle)
     try {
@@ -330,6 +344,10 @@ export class TabManager {
         view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
       }
     }
+
+    const extManager = (global as any).extensionManager;
+    const activeView = this.tabs.get(tabId);
+    if (extManager && activeView) extManager.selectTab(activeView.webContents);
 
     this.resizeActiveTab();
     this.notifyTabUpdate();
