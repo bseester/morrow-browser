@@ -11,3 +11,6 @@ convert_icon.js
 print_log.js
 show_aura.ps1
 .env
+
+/.chromium/
+__pycache__/
